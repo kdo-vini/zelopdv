@@ -10,6 +10,7 @@ import { PLANS } from '../src/lib/pricing.js';
 // section or throws in the component, not a build error.
 const SEGMENT_REQUIRED_FIELDS = [
   'slug',
+  'updatedAt',
   'meta',
   'segmentName',
   'heroBadge',
@@ -32,6 +33,7 @@ const SEGMENT_REQUIRED_FIELDS = [
 
 const COMPARISON_REQUIRED_FIELDS = [
   'slug',
+  'updatedAt',
   'competitor',
   'priceCheckedAt',
   'meta',
@@ -116,6 +118,19 @@ describe('segmentPages (/para-*)', () => {
       expect(page.problemPoints.length).toBeGreaterThan(0);
       expect(page.features.length).toBeGreaterThan(0);
       expect(page.steps.length).toBeGreaterThan(0);
+    }
+  });
+
+  // updatedAt alimenta a linha "Atualizado em ..." em SegmentLandingPage.svelte,
+  // o dateModified do WebPage JSON-LD e o <lastmod> do sitemap — precisa ser
+  // uma data real (YYYY-MM-DD) e nunca no futuro.
+  it('every updatedAt is a valid YYYY-MM-DD date, not in the future', () => {
+    const now = new Date();
+    for (const page of pages) {
+      expect(page.updatedAt, page.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      const parsed = new Date(`${page.updatedAt}T00:00:00`);
+      expect(parsed.toString(), `${page.slug} has an invalid updatedAt`).not.toBe('Invalid Date');
+      expect(parsed.getTime(), `${page.slug} updatedAt is in the future`).toBeLessThanOrEqual(now.getTime());
     }
   });
 
@@ -206,6 +221,19 @@ describe('competitorComparisons (/vs-*)', () => {
     const expectedZeloPrice = `R$ ${PLANS.pdv.price.toFixed(0)}/mês`;
     for (const c of comparisons) {
       expect(c.priceAnchor.zelo).toBe(expectedZeloPrice);
+    }
+  });
+
+  // updatedAt alimenta a linha "Atualizado em ..." em CompetitorComparison.svelte,
+  // o dateModified do WebPage JSON-LD e o <lastmod> do sitemap — precisa ser
+  // uma data real (YYYY-MM-DD) e nunca no futuro.
+  it('every updatedAt is a valid YYYY-MM-DD date, not in the future', () => {
+    const now = new Date();
+    for (const c of comparisons) {
+      expect(c.updatedAt, c.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      const parsed = new Date(`${c.updatedAt}T00:00:00`);
+      expect(parsed.toString(), `${c.slug} has an invalid updatedAt`).not.toBe('Invalid Date');
+      expect(parsed.getTime(), `${c.slug} updatedAt is in the future`).toBeLessThanOrEqual(now.getTime());
     }
   });
 

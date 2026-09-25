@@ -1,7 +1,12 @@
 <script>
   import { page } from '$app/stores';
   import SegmentLandingPage from '$lib/components/marketing/SegmentLandingPage.svelte';
-  import { buildFaqSchema, segmentPages, softwareApplicationSchema } from '$lib/data/segmentLandingPages';
+  import {
+    buildFaqSchema,
+    buildWebPageSchemaForSegment,
+    segmentPages,
+    softwareApplicationSchema
+  } from '$lib/data/segmentLandingPages';
   import { error } from '@sveltejs/kit';
 
   const pageData = segmentPages[$page.params.slug];
@@ -9,6 +14,7 @@
     throw error(404, 'Página não encontrada');
   }
   const faqSchema = buildFaqSchema(pageData);
+  const webPageSchema = buildWebPageSchemaForSegment(pageData);
 </script>
 
 <svelte:head>
@@ -30,6 +36,7 @@
 
   {@html `<script type="application/ld+json">${JSON.stringify(softwareApplicationSchema)}</script>`}
   {@html `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify(webPageSchema)}</script>`}
 </svelte:head>
 
 <SegmentLandingPage page={pageData} />

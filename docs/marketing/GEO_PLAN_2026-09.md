@@ -18,7 +18,11 @@
 | IndexNow | Rota + `npm run indexnow`; `INDEXNOW_KEY` na Vercel; keyLocation em `www` (apex 307) |
 | Bing Webmaster Tools | Pendente (ação manual: importar do Google Search Console) |
 | Banner para quem veio de IA | Feito — `AiReferralBanner.svelte` na home |
-| Frentes 2 e 3 (conteúdo, menções externas) | Não iniciadas — dependem de produção editorial |
+| Frente 2 (conteúdo) | Em andamento — leva 1 (24/09) e comparativo "melhores PDV para lanchonete 2026" (25/09) |
+| Data de revisão visível + `dateModified` em `/vs-*` e `/para-*` | Feito (25/09) |
+| `sameAs` central (`ORGANIZATION.sameAs`) | Feito; perfis externos ainda não criados |
+| Frente 3 (menções externas) | Kit pronto em [GEO_KIT_PERFIS.md](GEO_KIT_PERFIS.md); execução manual pendente |
+| App do Zelo no ChatGPT (Apps SDK/MCP, diretório chatgpt.com/apps) | Ideia (25/09) — calculadora de taxa iFood/preço dentro do ChatGPT |
 
 ## 1. Diagnóstico (estado real em 2026-09-23)
 

@@ -12,6 +12,219 @@ import { inlineFigure } from '$lib/blog/images';
 
 export const posts = [
   {
+    slug: 'melhores-sistemas-pdv-para-lanchonete-2026',
+    title: 'Melhores sistemas PDV para lanchonete em 2026: comparativo honesto com preços',
+    description:
+      'Comparamos preço público de entrada, operação offline, NFC-e, integração com iFood e fiado de 8 sistemas de PDV para lanchonete, com fontes oficiais e data de consulta.',
+    keyword: 'melhor sistema pdv para lanchonete',
+    coverVariant: 'orbital',
+    publishedAt: '2026-09-25',
+    readingTime: '13 min',
+    tldr: [
+      `Mais barato com fiado e offline: o Zelo PDV custa R$ ${PLANS.pdv.price.toFixed(0)}/mês, funciona sem internet e não emite NFC-e — se você precisa de nota fiscal pelo próprio sistema, veja Saipos, Consumer, Anota AI ou Yooga.`,
+      'Precisa de NFC-e integrada: Saipos, Consumer, Anota AI e Yooga anunciam emissão fiscal; o Zelo PDV não emite nota e exige um emissor fiscal à parte.',
+      'Delivery grande com iFood pesado e operação de rede: Saipos e Consumer têm integração e recursos mais robustos, com preço de entrada acima de R$ 200/mês.',
+      'Cardápio digital e robô de WhatsApp são o foco: Goomer e Anota AI são especializadas nisso, mas nenhuma das duas é, por si só, uma frente de caixa completa como o Zelo, a Consumer, a Kyte, o SisFood, a Saipos ou a Yooga.',
+      'Orçamento mínimo e varejo em geral (não só comida): a Kyte tem plano grátis e entrada mais barata que o Zelo, mas não é especializada em food service.'
+    ],
+    faq: [
+      {
+        question: 'Qual o PDV mais barato para lanchonete?',
+        answer:
+          `Em preço de entrada publicado, a Kyte tem plano grátis e o Pro custa R$ 49,90/mês, mas não é especializada em food service. Entre os sistemas feitos para restaurante e lanchonete, o Zelo PDV é o mais barato com preço público, a R$ ${PLANS.pdv.price.toFixed(0)}/mês, sem exigir plano anual.`
+      },
+      {
+        question: 'Qual PDV funciona sem internet?',
+        answer:
+          'O Zelo PDV funciona offline direto no navegador (PWA) e sincroniza quando a conexão volta. A Consumer também divulga operação offline com sincronização automática. O SisFood anuncia uma contingência offline mais limitada, só para vendas em dinheiro (NFC-e, TEF e iFood continuam dependendo de internet, segundo a própria empresa). Saipos, Anota AI, Goomer e Yooga não anunciam operação offline nos materiais públicos consultados.'
+      },
+      {
+        question: 'Preciso de PDV com NFC-e?',
+        answer:
+          'Depende da sua obrigação fiscal e de como você já emite nota hoje. Saipos, Consumer, Anota AI e Yooga anunciam emissão de NFC-e/NF-e (a Consumer e a Anota AI já incluem isso no plano de entrada). O Zelo PDV não emite nota fiscal — funciona com um emissor fiscal separado, se você precisar.'
+      },
+      {
+        question: 'Sistema de PDV grátis vale a pena para lanchonete?',
+        answer:
+          'A Kyte tem um plano grátis, mas não é pensada para food service (é voltada a varejo em geral) e o material público dela não confirma recursos como taxa de delivery configurável. Para uma lanchonete, vale comparar o custo de um plano pago especializado (a partir de R$ 59/mês no Zelo) contra o tempo perdido remendando um sistema genérico.'
+      },
+      {
+        question: 'Dá para trocar de sistema de PDV depois?',
+        answer:
+          'Sim, mas migrar histórico de vendas, estoque e clientes dá trabalho. Por isso vale testar o sistema de verdade — a maioria dos comparados aqui, incluindo o Zelo PDV, tem teste grátis sem cartão — antes de bater o martelo, em vez de trocar depois de alguns meses de uso.'
+      }
+    ],
+    content: `
+      <p>Comparamos 8 sistemas de PDV usados por lanchonetes e restaurantes pequenos no Brasil, com preço consultado nos sites oficiais em <strong>setembro de 2026</strong>. A resposta curta: não existe "o melhor" único — existe o melhor para o seu caso. Se você precisa de nota fiscal pelo próprio sistema, o Zelo PDV está fora (ele não emite NFC-e); se o orçamento é o critério e você não precisa de fiscal integrada, ele é a opção mais barata com preço público entre os sistemas de food service testados.</p>
+      <p>Este comparativo é publicado pelo Zelo PDV. Somos parte interessada — por isso, cada número tem fonte oficial e data de consulta, e incluímos casos honestos em que outro sistema é a escolha certa, inclusive quando isso significa não usar o Zelo.</p>
+
+      <h2>Como avaliamos</h2>
+      <p>Usamos os mesmos sete critérios para todos os sistemas, sempre com base no que cada empresa divulga publicamente (site oficial, página de planos, central de ajuda):</p>
+      <ul>
+        <li><strong>Preço público de entrada</strong> — precisa estar no site, sem precisar falar com vendedor para saber o valor.</li>
+        <li><strong>Funciona offline</strong> — o sistema continua registrando vendas sem internet e sincroniza depois.</li>
+        <li><strong>Emite NFC-e/NF-e</strong> — nota fiscal de venda pelo próprio sistema, sem um emissor fiscal separado.</li>
+        <li><strong>Integração com iFood</strong> — recebe ou registra pedidos de plataformas de delivery.</li>
+        <li><strong>Controle de fiado</strong> — conta corrente de cliente, histórico e limite.</li>
+        <li><strong>Cardápio digital</strong> — pedido online, QR Code ou totem.</li>
+        <li><strong>Teste grátis</strong> — dá para usar de verdade antes de pagar.</li>
+      </ul>
+      <p>Quando um recurso não aparece no material público de um concorrente, isso não significa necessariamente que o sistema não faça aquilo — significa que a empresa não anuncia esse ponto onde procuramos, e por isso marcamos como "não anuncia" ou "não verificado" em vez de inventar uma resposta.</p>
+
+      <h2>Comparativo rápido</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Sistema</th>
+            <th>Preço de entrada (data)</th>
+            <th>Offline</th>
+            <th>NFC-e</th>
+            <th>iFood</th>
+            <th>Fiado</th>
+            <th>Melhor para</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Zelo PDV</strong></td>
+            <td>R$ ${PLANS.pdv.price.toFixed(0)}/mês (set/2026)</td>
+            <td>Sim (PWA)</td>
+            <td>Não</td>
+            <td>Registra venda com taxa configurável</td>
+            <td>Sim, nativo</td>
+            <td>Lanchonete pequena/média, preço baixo, sem precisar de NF integrada</td>
+          </tr>
+          <tr>
+            <td>Saipos</td>
+            <td>A partir de R$ 240,79/mês (set/2026)</td>
+            <td>Não (100% nuvem)</td>
+            <td>Sim</td>
+            <td>Sim (integração)</td>
+            <td>Não verificado</td>
+            <td>Restaurante/rede grande com orçamento maior</td>
+          </tr>
+          <tr>
+            <td>Consumer</td>
+            <td>R$ 59,90/mês (Essencial, anual, set/2026)</td>
+            <td>Sim (divulgado)</td>
+            <td>Sim</td>
+            <td>Sim (integração)</td>
+            <td>Sim</td>
+            <td>Quem precisa de NF integrada e preço de entrada parecido com o Zelo</td>
+          </tr>
+          <tr>
+            <td>Kyte</td>
+            <td>Grátis a R$ 99,90/mês (set/2026)</td>
+            <td>App mobile sim; Kyte Web não</td>
+            <td>Não anuncia</td>
+            <td>Não anuncia</td>
+            <td>Sim</td>
+            <td>Varejo em geral com orçamento mínimo (não é foco food service)</td>
+          </tr>
+          <tr>
+            <td>Goomer</td>
+            <td>A partir de R$ 224,92/mês, anual (set/2026)</td>
+            <td>Não verificado</td>
+            <td>Não anuncia</td>
+            <td>Sim (parceria)</td>
+            <td>Depende do PDV integrado</td>
+            <td>Cardápio digital, QR Code e totem como prioridade</td>
+          </tr>
+          <tr>
+            <td>Anota AI</td>
+            <td>A partir de R$ 99,99/mês (set/2026)</td>
+            <td>Não anuncia</td>
+            <td>Sim (todos os planos)</td>
+            <td>Não anuncia</td>
+            <td>Não verificado</td>
+            <td>Robô de IA no WhatsApp + NF integrada</td>
+          </tr>
+          <tr>
+            <td>SisFood</td>
+            <td>A partir de R$ 149,90/mês (consultado em setembro de 2026)</td>
+            <td>Parcial (só dinheiro; NFC-e/TEF/iFood dependem de internet)</td>
+            <td>Sim, módulo à parte</td>
+            <td>Não verificado</td>
+            <td>Não verificado</td>
+            <td>Food service que aceita módulo fiscal e totem à parte</td>
+          </tr>
+          <tr>
+            <td>Yooga</td>
+            <td>A partir de R$ 249/mês (consultado em junho de 2026; preço não público em set/2026)</td>
+            <td>Não anuncia</td>
+            <td>Sim (planos Completo/Premium)</td>
+            <td>Sim (plano Básico)</td>
+            <td>Não verificado</td>
+            <td>Restaurante estruturado que já quer KDS e recursos de rede</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>"Não verificado" significa que não encontramos essa informação nas páginas oficiais consultadas nesta pesquisa — não é uma afirmação de que o recurso não existe. O preço do SisFood foi reconfirmado em setembro de 2026. A Yooga não publica mais preço no site em setembro de 2026 (direciona para "falar com especialista"); por isso mantivemos o último valor público verificado, de junho de 2026, datado como tal.</p>
+
+      <h2>Zelo PDV</h2>
+      <p><strong>Para quem é:</strong> lanchonetes, hamburguerias, delivery próprio e MEIs de alimentação que querem frente de caixa, fiado, estoque e financeiro por um preço baixo e público, funcionando mesmo com internet instável.</p>
+      <p><strong>Pontos fortes:</strong> R$ ${PLANS.pdv.price.toFixed(0)}/mês de entrada, sem exigir plano anual; funciona offline direto no navegador (PWA); fiado nativo; módulos opcionais (Mesas +R$ ${ADDONS.mesas.price.toFixed(0)}, Controle de Acessos +R$ ${ADDONS.acessos.price.toFixed(0)}, ZeloMenu +R$ ${ADDONS.menu.price.toFixed(0)}) em vez de pacote fechado; teste de ${TRIAL_DAYS} dias grátis, sem cartão.</p>
+      <p><strong>Quando não escolher:</strong> se você precisa emitir NFC-e pelo próprio sistema, o Zelo PDV não é a opção certa — ele não emite nota fiscal (nem NFC-e nem NF-e), só recibos e comprovantes de venda. Nesse caso, considere Saipos, Consumer, Anota AI ou Yooga, que anunciam emissão fiscal integrada. O Zelo também não tem totem de autoatendimento nem robô de IA no WhatsApp.</p>
+
+      <h2>Saipos</h2>
+      <p><strong>Para quem é:</strong> restaurantes e redes maiores que já têm faturamento para justificar um pacote robusto com mais de 70 recursos e forte integração com plataformas de delivery.</p>
+      <p><strong>Pontos fortes:</strong> emite NFC-e no modelo A1 com envio automático de XML para a contabilidade; integra com mais de 50 plataformas, incluindo iFood; oferece demonstração gratuita.</p>
+      <p><strong>Quando não escolher:</strong> se o orçamento é apertado (entrada a partir de R$ 240,79/mês, com valor final segmentado por faturamento e fechado em demonstração comercial) ou se você precisa vender sem internet — o material público não confirma operação offline. Veja a comparação completa em <a href="/vs-saipos">Zelo PDV vs Saipos</a>.</p>
+
+      <h2>Consumer</h2>
+      <p><strong>Para quem é:</strong> quem quer um preço de entrada parecido com o do Zelo PDV, mas já precisa de emissão fiscal (NFC-e/CF-e/SAT/MFE/NF-e) integrada desde o plano básico.</p>
+      <p><strong>Pontos fortes:</strong> plano Essencial a R$ 59,90/mês (cobrança anual); emissor fiscal completo incluso; controle de fiado e conta corrente do cliente; divulga operação offline com sincronização automática; forte presença em integração com iFood.</p>
+      <p><strong>Quando não escolher:</strong> se você precisa de mais de um computador/terminal logo no início — sair do Essencial para o plano com PDV em rede custa R$ 179,90/mês, quase o triplo. Veja a comparação completa em <a href="/vs-consumer">Zelo PDV vs Consumer</a>.</p>
+
+      <h2>Kyte</h2>
+      <p><strong>Para quem é:</strong> pequenos comerciantes de varejo em geral (moda, calçados, acessórios) com orçamento mínimo — não é um produto pensado para food service.</p>
+      <p><strong>Pontos fortes:</strong> plano grátis disponível; Pro a R$ 49,90/mês, mais barato que o Zelo; o app mobile funciona offline e sincroniza depois; tem função própria de controle de fiado e débito.</p>
+      <p><strong>Quando não escolher:</strong> se você tem uma lanchonete ou restaurante e precisa de recursos pensados para food service, como taxa de delivery configurável — isso não é destacado no material público da Kyte. A versão Kyte Web também é descrita pela própria empresa como totalmente online, diferente do app mobile. Veja a comparação completa em <a href="/vs-kyte">Zelo PDV vs Kyte</a>.</p>
+
+      <h2>Goomer</h2>
+      <p><strong>Para quem é:</strong> quem quer cardápio digital, QR Code na mesa e totem de autoatendimento como prioridade — não é, por desenho, um PDV completo.</p>
+      <p><strong>Pontos fortes:</strong> forte em QR Code, tablet e totem; parceria de entrega sob demanda com o iFood; plano grátis para até 30 pedidos/mês.</p>
+      <p><strong>Quando não escolher:</strong> se você precisa de frente de caixa, fiado e estoque nativos — a Goomer se integra a um PDV externo para isso, e o plano com PDV ("Integrar") parte de R$ 224,92/mês no anual. Acima de 30 pedidos no plano grátis, cobra R$ 1,39 por pedido. Veja a comparação completa em <a href="/vs-goomer">Zelo PDV vs Goomer</a>.</p>
+
+      <h2>Anota AI</h2>
+      <p><strong>Para quem é:</strong> quem quer um robô de atendimento por IA no WhatsApp como centro da operação, com nota fiscal automatizada incluída em todos os planos.</p>
+      <p><strong>Pontos fortes:</strong> NF automatizada, cardápio digital, KDS e frente de caixa já no plano de entrada (R$ 99,99/mês, até 150 pedidos/mês); robô de IA no WhatsApp é o diferencial central; sem fidelidade no plano anual, segundo o site oficial.</p>
+      <p><strong>Quando não escolher:</strong> se o seu volume de pedidos varia bastante — o preço sobe por faixa (151 a 250 pedidos: R$ 199,99/mês; acima de 250: R$ 299,99/mês) — ou se você precisa vender sem internet, recurso que o material público não anuncia. Veja a comparação completa em <a href="/vs-anota-ai">Zelo PDV vs Anota AI</a>.</p>
+
+      <h2>SisFood</h2>
+      <p><strong>Para quem é:</strong> food service que quer um pacote com PDV, cardápio digital e robô de WhatsApp, e não se importa em pagar módulos fiscais e totem à parte.</p>
+      <p><strong>Pontos fortes:</strong> pacote "tudo incluído" no núcleo (PDV, cardápio, WhatsApp); sem fidelidade obrigatória segundo a empresa; desde meados de 2026 também anuncia contingência offline para vendas em dinheiro.</p>
+      <p><strong>Quando não escolher:</strong> se você precisa vender sem depender de internet para tudo — o próprio site avisa que NFC-e, TEF e integração com iFood continuam dependendo de conexão, mesmo com a contingência offline. O preço de entrada (a partir de R$ 149,90/mês) foi reconfirmado no site oficial em setembro de 2026. Veja a comparação completa em <a href="/vs-sisfood">Zelo PDV vs SisFood</a>.</p>
+
+      <h2>Yooga</h2>
+      <p><strong>Para quem é:</strong> restaurante mais estruturado que já quer KDS, NFC-e no plano Completo/Premium e integração com iFood desde o plano Básico.</p>
+      <p><strong>Pontos fortes:</strong> integração com iFood no plano de entrada; NFC-e/CF-e ilimitada nos planos superiores; recursos de rede e IA no Premium.</p>
+      <p><strong>Quando não escolher:</strong> se o orçamento é limitado — o último preço público que encontramos ficava a partir de R$ 249/mês (junho de 2026), e em setembro de 2026 o site não publica mais valores, direcionando para "falar com especialista". Também não anuncia operação offline, e há relatos de clientes no Reclame Aqui sobre cobrança acima do anunciado. Veja a comparação completa em <a href="/vs-yooga">Zelo PDV vs Yooga</a>.</p>
+
+      <h2>Como escolher em 5 passos</h2>
+      <ol>
+        <li><strong>Decida se precisa de NFC-e/NF-e pelo próprio sistema.</strong> Se sim, isso já corta metade da lista (o Zelo PDV, por exemplo, sai fora). Se não — porque você já tem um emissor fiscal separado ou emite recibo — o campo de opções abre.</li>
+        <li><strong>Teste a operação offline no seu ponto real.</strong> Internet instável em horário de pico derruba caixa em sistema 100% cloud. Peça para testar exatamente no seu endereço, não confie só na propaganda.</li>
+        <li><strong>Some o preço de entrada com o módulo que você sabe que vai usar.</strong> Mesas, fiado avançado, cardápio digital — alguns sistemas cobram isso à parte ou empurram para um plano muito mais caro (veja a Consumer saltando de R$ 59,90 para R$ 179,90 por PDV em rede, ou a Anota AI subindo por faixa de pedidos).</li>
+        <li><strong>Verifique fiado e estoque, não assuma.</strong> Alguns sistemas de cardápio digital (como a Goomer) dependem de um PDV externo para isso — você pode acabar pagando duas assinaturas.</li>
+        <li><strong>Use o teste grátis com dados reais</strong> — um turno de pico, um pedido de delivery, um cliente fiado — antes de migrar o histórico de verdade. A maioria dos sistemas comparados aqui, incluindo o Zelo PDV, oferece isso sem pedir cartão.</li>
+      </ol>
+      <p>Para mais contexto sobre o que um PDV de lanchonete precisa cobrir no dia a dia, veja <a href="/para-lanchonetes">Zelo PDV para lanchonetes</a>. Para comparar outros sistemas específicos, veja os <a href="/comparativos">comparativos Zelo PDV vs concorrentes</a>. E se você já sabe que precisa calcular taxa de delivery ou lucro real, tem calculadora pronta em <a href="/ferramentas">ferramentas Zelo PDV</a>.</p>
+
+      <h2>Fontes</h2>
+      <ul>
+        <li>Saipos — Planos e preços (oficial): <a href="https://saipos.com/planos-e-precos">saipos.com/planos-e-precos</a> — consultado em setembro de 2026</li>
+        <li>Consumer — Planos (oficial): <a href="https://loja.consumer.com.br/">loja.consumer.com.br</a> — consultado em setembro de 2026</li>
+        <li>Kyte — Planos (oficial): <a href="https://www.kyteapp.com/pt/planos">kyteapp.com/pt/planos</a> — consultado em setembro de 2026</li>
+        <li>Goomer — Planos (oficial): <a href="https://goomer.com.br/planos">goomer.com.br/planos</a> — consultado em setembro de 2026</li>
+        <li>Anota AI — Planos (oficial): <a href="https://anota.ai/blog/planos-principal/">anota.ai/blog/planos-principal</a> — consultado em setembro de 2026</li>
+        <li>SisFood — Site oficial: <a href="https://www.sisfood.com.br/">sisfood.com.br</a> — consultado em setembro de 2026</li>
+        <li>Yooga — Planos (oficial): <a href="https://yooga.com.br/planos/">yooga.com.br/planos</a> — consultado em setembro de 2026 (sem preço público nesta data; último valor confirmado em junho de 2026)</li>
+        <li>Zelo PDV — Catálogo de planos: <a href="/sobre">zelopdv.com.br/sobre</a></li>
+      </ul>
+    `
+  },
+  {
     slug: 'taxa-ifood-2026-como-calcular',
     title: 'Quanto o iFood cobra em 2026 e como calcular se vale a pena',
     description:

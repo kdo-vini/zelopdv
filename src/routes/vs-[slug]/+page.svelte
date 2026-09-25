@@ -3,6 +3,7 @@
   import CompetitorComparison from '$lib/components/marketing/CompetitorComparison.svelte';
   import {
     buildComparisonFaqSchema,
+    buildComparisonWebPageSchema,
     competitorComparisons,
     softwareApplicationSchema
   } from '$lib/data/competitorComparisons';
@@ -13,6 +14,7 @@
     throw error(404, 'Comparação não encontrada');
   }
   const faqSchema = buildComparisonFaqSchema(comparison);
+  const webPageSchema = buildComparisonWebPageSchema(comparison);
 </script>
 
 <svelte:head>
@@ -34,6 +36,7 @@
 
   {@html `<script type="application/ld+json">${JSON.stringify(softwareApplicationSchema)}</script>`}
   {@html `<script type="application/ld+json">${JSON.stringify(faqSchema)}</script>`}
+  {@html `<script type="application/ld+json">${JSON.stringify(webPageSchema)}</script>`}
 </svelte:head>
 
 <CompetitorComparison {comparison} />

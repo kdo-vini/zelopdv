@@ -7,9 +7,12 @@ import {
   buildFaqSchema,
   buildOrganizationSchema,
   buildSoftwareApplicationSchema,
+  buildWebPageSchema,
   DEFAULT_SOCIAL,
   formatBRL,
+  formatDatePtBR,
   ORGANIZATION,
+  SITE_NAME,
   SITE_URL
 } from '../src/lib/seo/site.js';
 
@@ -31,6 +34,47 @@ describe('seo/site.js', () => {
     expect(schema['@type']).toBe('Organization');
     expect(schema.name).toBe(ORGANIZATION.brand);
     expect(schema.legalName).toBe(ORGANIZATION.legalName);
+  });
+
+  it('buildOrganizationSchema sameAs comes from ORGANIZATION.sameAs, not a hardcoded list', () => {
+    const schema = buildOrganizationSchema();
+    expect(schema.sameAs).toBe(ORGANIZATION.sameAs);
+    expect(Array.isArray(ORGANIZATION.sameAs)).toBe(true);
+    expect(ORGANIZATION.sameAs).toContain(ORGANIZATION.instagram);
+    for (const url of ORGANIZATION.sameAs) {
+      expect(url).toMatch(/^https?:\/\//);
+    }
+  });
+
+  it('formatDatePtBR renders a YYYY-MM-DD date written out in pt-BR', () => {
+    expect(formatDatePtBR('2026-09-24')).toBe('24 de setembro de 2026');
+    expect(formatDatePtBR('')).toBe('');
+    expect(formatDatePtBR(undefined)).toBe('');
+  });
+
+  it('buildWebPageSchema emits a WebPage node with dateModified, isPartOf and no invented datePublished', () => {
+    const schema = buildWebPageSchema({
+      url: `${SITE_URL}/vs-saipos`,
+      name: 'Zelo PDV vs Saipos',
+      dateModified: '2026-09-23'
+    });
+    expect(schema['@context']).toBe('https://schema.org');
+    expect(schema['@type']).toBe('WebPage');
+    expect(schema.url).toBe(`${SITE_URL}/vs-saipos`);
+    expect(schema.dateModified).toBe('2026-09-23');
+    expect(schema.inLanguage).toBe('pt-BR');
+    expect(schema.isPartOf).toEqual({ '@type': 'WebSite', name: SITE_NAME, url: SITE_URL });
+    expect(schema).not.toHaveProperty('datePublished');
+  });
+
+  it('buildWebPageSchema includes datePublished only when explicitly given', () => {
+    const schema = buildWebPageSchema({
+      url: `${SITE_URL}/vs-saipos`,
+      name: 'Zelo PDV vs Saipos',
+      dateModified: '2026-09-23',
+      datePublished: '2026-06-09'
+    });
+    expect(schema.datePublished).toBe('2026-06-09');
   });
 
   it('buildSoftwareApplicationSchema derives offers from PLANS and ADDONS, not literals', () => {

@@ -24,6 +24,42 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     variantes do sistema, `MoneyText animate`; sidebar com as métricas do
     mockup (244 px, itens 13,5/38 px). Movimento reduzido zera durações e squash.
 
+## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
+
+Diagnóstico de 25/09: o on-site já estava bom (SSR para os bots de IA, JSON-LD,
+robots, llms.txt). O gargalo está fora do site. A busca por "Zelo PDV" traz
+K-pop e restaurantes homônimos, e o `sameAs` só apontava para
+`instagram.com/techne.ia`. O Zelo não aparece nas listas de terceiros (ex.:
+Negócio Certo, "7 Melhores Sistemas PDV", 03/09). O Bing Webmaster continua
+pendente. Desde agosto de 2026 o ChatGPT corta Reddit e prefere fontes
+canônicas e first-party.
+
+- `/vs-*` e `/para-*`: `updatedAt` por entrada (derivado do `git blame`),
+  linha visível "Atualizado em", JSON-LD `WebPage` com `dateModified` e
+  `lastmod` no sitemap. No hero das `/vs-*`, o antigo "Atualizado em
+  {priceCheckedAt}" virou "Preço checado em".
+- `ORGANIZATION.sameAs` em `src/lib/seo/site.js` é a fonte do `sameAs`. Cada
+  perfil novo (Google Business, Reclame Aqui, Capterra etc.) entra ali.
+- Post `/blog/melhores-sistemas-pdv-para-lanchonete-2026`: 8 sistemas, com
+  aviso de que é publicado pelo Zelo, "quando não escolher" (inclusive o Zelo,
+  sem NFC-e) e fontes datadas.
+- Preços rechecados em 2026-09-25. A Anota AI passou a cobrar por faixa de
+  pedidos (R$ 99,99 / 199,99 / 299,99) e anuncia NF automatizada, e
+  `/vs-anota-ai` foi reescrita. Pendências fechadas no mesmo dia: o WhatsMenu cobra R$ 197/mês no mensal
+  ou 12x R$ 97 no anual (`/vs-whatsmenu` reescrita). A SisFood segue em
+  R$ 149,90, mas agora anuncia contingência offline (vendas em dinheiro; NFC-e,
+  TEF e iFood dependem de internet), e a alegação "100% cloud" saiu. A Yooga
+  não publica mais preço: aparece como "sob consulta", com os valores de junho
+  de 2026 citados como histórico.
+- `docs/marketing/GEO_KIT_PERFIS.md`: ficha canônica, checklist de perfis,
+  pedido de avaliação, outreach, roteiro de entrevista com os 3 clientes que
+  vieram do ChatGPT e passo a passo do Bing Webmaster (relatório de IA).
+
+Validação: `npm test` com 2.196 testes passando e 3 skips (rodado pelo agente
+antes da última correção de texto); os 55 testes direcionados foram
+rerodados depois dela. `npm run check` sem erros. O post e `/vs-anota-ai`
+foram conferidos no dev server. Não houve deploy.
+
 ## Sessão 2026-09-25 — Retenção em lote de `zelochat_webhook_events_raw`
 
 Disk IO Budget do projeto compartilhado (Nano/Free) estava sendo queimado
