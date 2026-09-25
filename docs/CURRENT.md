@@ -21,10 +21,12 @@ canônicas e first-party.
   sem NFC-e) e fontes datadas.
 - Preços rechecados em 2026-09-25. A Anota AI passou a cobrar por faixa de
   pedidos (R$ 99,99 / 199,99 / 299,99) e anuncia NF automatizada, e
-  `/vs-anota-ai` foi reescrita. SisFood (403) e Yooga (sem preço público)
-  mantêm o valor de junho, rotulado. O WhatsMenu agora mostra mensal R$ 197 e
-  anual 12x R$ 97; `/vs-whatsmenu` ainda diz "R$ 97 plano único" e precisa
-  ser revisada.
+  `/vs-anota-ai` foi reescrita. Pendências fechadas no mesmo dia: o WhatsMenu cobra R$ 197/mês no mensal
+  ou 12x R$ 97 no anual (`/vs-whatsmenu` reescrita). A SisFood segue em
+  R$ 149,90, mas agora anuncia contingência offline (vendas em dinheiro; NFC-e,
+  TEF e iFood dependem de internet), e a alegação "100% cloud" saiu. A Yooga
+  não publica mais preço: aparece como "sob consulta", com os valores de junho
+  de 2026 citados como histórico.
 - `docs/marketing/GEO_KIT_PERFIS.md`: ficha canônica, checklist de perfis,
   pedido de avaliação, outreach, roteiro de entrevista com os 3 clientes que
   vieram do ChatGPT e passo a passo do Bing Webmaster (relatório de IA).
