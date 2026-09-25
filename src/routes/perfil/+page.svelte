@@ -750,7 +750,7 @@
     {:else}
 
       <!-- Tab nav -->
-      <nav class="flex gap-1 border-b mb-6 overflow-x-auto whitespace-nowrap" style="border-color: var(--border-subtle);">
+      <nav class="perfil-tabs flex gap-1 border-b mb-6 whitespace-nowrap" style="border-color: var(--border-subtle);">
         {#each tabs as t}
           <button
             type="button"
@@ -1578,3 +1578,15 @@
 {#if offlineCenterOpen}
   <OfflineCenter on:close={() => (offlineCenterOpen = false)} />
 {/if}
+
+<style>
+  .perfil-tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .perfil-tabs::-webkit-scrollbar {
+    display: none;
+  }
+</style>
