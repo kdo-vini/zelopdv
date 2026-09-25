@@ -49,6 +49,7 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   if (req.method() === 'OPTIONS') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
   if (url.pathname.startsWith('/auth/v1/user')) return json(user);
   if (url.pathname.startsWith('/auth/v1/token')) return json(session);
+  if (url.pathname === '/rest/v1/rpc/criar_venda_completa') return json({ id: 'v1', numero_venda: 1042 });
   if (url.pathname.startsWith('/rest/v1/rpc/')) return json(null);
   const m = url.pathname.match(/^\/rest\/v1\/([a-z_]+)/);
   if (m) {

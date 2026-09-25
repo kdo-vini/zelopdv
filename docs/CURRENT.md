@@ -23,6 +23,12 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     fechada, `blurSwap`, `rise`, `LiquidIndicator`), `MorphButton`, squash nas
     variantes do sistema, `MoneyText animate`; sidebar com as métricas do
     mockup (244 px, itens 13,5/38 px). Movimento reduzido zera durações e squash.
+  - **B — pagamento e sucesso** ✅: `ModalPagamento` (resumo mono, tiles com
+    `Kbd`, troco, dividido, fiado, plataformas, bottom sheet no mobile) com o
+    "Confirmar" em `MorphButton` (loading por `salvandoVenda`); `ModalSucesso`
+    vira o momento "Venda aprovada · R$ X" (check → pílula). Fluxo da venda,
+    atalhos e retry idênticos. Harness: `STEPS`, `MOTION`, `NO_CAIXA`, `EMPTY`
+    e RPC `criar_venda_completa` simulada.
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 
