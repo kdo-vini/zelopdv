@@ -13,7 +13,7 @@
 | 1 | Componentes do sistema + globais do layout raiz + ícones 1,75 | **Em andamento** — globais do layout (toasts, confirmação, offline, atualização, chats, bottom nav) atrás da flag |
 | 2 | Superfície Brand no ar (site, landing, blog) | **Pronta atrás da flag** — Geist + títulos em Mono, tokens `mk-*` nas 8 páginas/componentes com paleta Tailwind, erro legível; legado idêntico (full page). Falta ligar `LIVE_SURFACES.brand` (decisão do dono) |
 | 3 | Autenticação (Brand + cartão App) | **Pronta atrás da flag** — `AuthLayout` navy com cartão `data-surface="app"`, marca Zelo + título Mono; `.auth-*` restilizados só dentro do cartão; legado idêntico |
-| 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy (métricas do mockup) e `/app` (desktop + mobile) no layout do mockup, com o sistema de movimento; modais do PDV (pagamento, sucesso, quantidade, avulso, caixa, montável, novo produto), toasts, confirmação, offline e bottom nav no sistema |
+| 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy (métricas do mockup) e `/app` (desktop + mobile) no layout do mockup, com o sistema de movimento; modais do PDV (pagamento, sucesso, quantidade, avulso, caixa, montável, novo produto), toasts, confirmação, offline e bottom nav no sistema; demais telas internas legíveis pela camada de compatibilidade (`compat-app.css`), reescrita tela a tela pendente |
 | 5 | E-mails, PWA/`theme-color`, favicon/OG/logos, `chartColors.js` | Pendente |
 | 6 | Virada: App padrão, remover legado/flag/`class="dark"`, `check:ui` no repo todo | Pendente |
 
@@ -169,6 +169,14 @@ depois). O fluxo da venda não ganhou espera: botões e Enter do sucesso respond
 - Arquivos: `vs-planilha`, `extensoes`, `zelo-impressao`, `comparativos`, `precificacao`, `SegmentLandingPage`, `CompetitorComparison`, `MarketingPriceSection`. Landing, blog, sobre, contato e jurídicos já usavam tokens.
 - Verificação: `visual:diff` só compara a primeira dobra; a Fase 2 foi conferida também com captura de **página inteira** contra `main` (ruído medido rodando `main` duas vezes).
 - **Ligar:** `LIVE_SURFACES.brand = true` em `src/lib/theme/surface.js` + `tests/themeSurface.test.js`. Isso muda produção para todo visitante — fica para o dono decidir depois de ver com `?tema=novo`.
+
+## Fase 4 — camada de compatibilidade do `app`
+
+`src/themes/compat-app.css` (importado **fora de camada** em `app.css`) remapeia, só em `[data-surface="app"]`, as variáveis da paleta Tailwind que as telas ainda não reescritas usam: escala `slate/gray/zinc/neutral` invertida (texto claro → tinta, preenchimento escuro → painel/fundo, 600–700 → linhas), `sky/blue/cyan` → ação, `emerald/green` · `red/rose` · `amber/yellow/orange` → status. Ilhas `data-surface="brand"` dentro do app (sidebar) redeclaram o mesmo mapa com seus tokens.
+
+- É **transitória**: dá a todas as telas internas uma leitura coerente atrás da flag sem tocar em markup. Cada tela reescrita na Fase 4 deixa de depender dela; a Fase 6 apaga o arquivo.
+- `white`/`black` não são remapeados (texto branco sobre ação precisa continuar branco). Tela que ainda pinta texto corrido com `text-white` precisa de ajuste próprio.
+- O legado nunca tem `data-surface="app"`: conferido com o harness em mesas, pedidos, cozinha, gestão (dashboard, produtos, caixa, estoque, pessoas, despesas, fichário), relatórios, perfil, assinatura e ferramentas.
 
 ## Autenticação (Fase 3)
 

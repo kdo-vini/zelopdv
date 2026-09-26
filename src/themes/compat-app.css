@@ -1,0 +1,173 @@
+/* Zelo Design System — TRANSITIONAL compatibility layer for the `app` surface (Fase 4).
+ *
+ * Screens not yet rewritten for the Design System still carry Tailwind palette classes from the
+ * dark legacy theme (text-slate-100 titles, bg-slate-800 cards, bg-sky-500 actions…). Inside
+ * [data-surface="app"] this remaps those palette variables onto the light surface's tokens:
+ * the slate scale is inverted (light text → ink, dark fills → panel/app), sky/blue → action,
+ * green/red/amber → status. Legacy never renders [data-surface="app"], so it is untouched.
+ *
+ * Unlayered on purpose (src/app.css imports it outside any layer): src/themes/ lives in
+ * layer(base), which sorts before Tailwind's `theme` layer and could not override it.
+ *
+ * `white`/`black` are NOT remapped (white text on an action fill must stay white). A screen
+ * that still paints body text with `text-white` needs its own fix. Every screen rewritten in
+ * Fase 4 stops depending on this file; Fase 6 deletes it. docs/DESIGN_SYSTEM.md → Fase 4.
+ */
+[data-surface="app"],
+/* brand islands inside the app (navy sidebar) re-resolve the same map with their own tokens */
+[data-surface="app"] [data-surface="brand"] {
+  --color-slate-50: var(--text-main);
+  --color-slate-100: var(--text-main);
+  --color-slate-200: var(--text-main);
+  --color-slate-300: var(--text-label);
+  --color-slate-400: var(--text-muted);
+  --color-slate-500: var(--text-muted);
+  --color-slate-600: var(--border-strong);
+  --color-slate-700: var(--border-card);
+  --color-slate-800: var(--bg-panel);
+  --color-slate-900: var(--bg-app);
+  --color-slate-950: var(--bg-app);
+  --color-gray-50: var(--text-main);
+  --color-gray-100: var(--text-main);
+  --color-gray-200: var(--text-main);
+  --color-gray-300: var(--text-label);
+  --color-gray-400: var(--text-muted);
+  --color-gray-500: var(--text-muted);
+  --color-gray-600: var(--border-strong);
+  --color-gray-700: var(--border-card);
+  --color-gray-800: var(--bg-panel);
+  --color-gray-900: var(--bg-app);
+  --color-gray-950: var(--bg-app);
+  --color-zinc-50: var(--text-main);
+  --color-zinc-100: var(--text-main);
+  --color-zinc-200: var(--text-main);
+  --color-zinc-300: var(--text-label);
+  --color-zinc-400: var(--text-muted);
+  --color-zinc-500: var(--text-muted);
+  --color-zinc-600: var(--border-strong);
+  --color-zinc-700: var(--border-card);
+  --color-zinc-800: var(--bg-panel);
+  --color-zinc-900: var(--bg-app);
+  --color-zinc-950: var(--bg-app);
+  --color-neutral-50: var(--text-main);
+  --color-neutral-100: var(--text-main);
+  --color-neutral-200: var(--text-main);
+  --color-neutral-300: var(--text-label);
+  --color-neutral-400: var(--text-muted);
+  --color-neutral-500: var(--text-muted);
+  --color-neutral-600: var(--border-strong);
+  --color-neutral-700: var(--border-card);
+  --color-neutral-800: var(--bg-panel);
+  --color-neutral-900: var(--bg-app);
+  --color-neutral-950: var(--bg-app);
+  --color-sky-50: var(--primary);
+  --color-sky-100: var(--primary);
+  --color-sky-200: var(--primary);
+  --color-sky-300: var(--primary);
+  --color-sky-400: var(--primary);
+  --color-sky-500: var(--primary);
+  --color-sky-600: var(--primary);
+  --color-sky-700: var(--primary);
+  --color-sky-800: var(--primary);
+  --color-sky-900: var(--primary);
+  --color-sky-950: var(--primary);
+  --color-blue-50: var(--primary);
+  --color-blue-100: var(--primary);
+  --color-blue-200: var(--primary);
+  --color-blue-300: var(--primary);
+  --color-blue-400: var(--primary);
+  --color-blue-500: var(--primary);
+  --color-blue-600: var(--primary);
+  --color-blue-700: var(--primary);
+  --color-blue-800: var(--primary);
+  --color-blue-900: var(--primary);
+  --color-blue-950: var(--primary);
+  --color-cyan-50: var(--primary);
+  --color-cyan-100: var(--primary);
+  --color-cyan-200: var(--primary);
+  --color-cyan-300: var(--primary);
+  --color-cyan-400: var(--primary);
+  --color-cyan-500: var(--primary);
+  --color-cyan-600: var(--primary);
+  --color-cyan-700: var(--primary);
+  --color-cyan-800: var(--primary);
+  --color-cyan-900: var(--primary);
+  --color-cyan-950: var(--primary);
+  --color-emerald-50: var(--status-success-text);
+  --color-emerald-100: var(--status-success-text);
+  --color-emerald-200: var(--status-success-text);
+  --color-emerald-300: var(--status-success-text);
+  --color-emerald-400: var(--status-success-text);
+  --color-emerald-500: var(--status-success-text);
+  --color-emerald-600: var(--status-success-text);
+  --color-emerald-700: var(--status-success-text);
+  --color-emerald-800: var(--status-success-text);
+  --color-emerald-900: var(--status-success-text);
+  --color-emerald-950: var(--status-success-text);
+  --color-green-50: var(--status-success-text);
+  --color-green-100: var(--status-success-text);
+  --color-green-200: var(--status-success-text);
+  --color-green-300: var(--status-success-text);
+  --color-green-400: var(--status-success-text);
+  --color-green-500: var(--status-success-text);
+  --color-green-600: var(--status-success-text);
+  --color-green-700: var(--status-success-text);
+  --color-green-800: var(--status-success-text);
+  --color-green-900: var(--status-success-text);
+  --color-green-950: var(--status-success-text);
+  --color-red-50: var(--status-error-text);
+  --color-red-100: var(--status-error-text);
+  --color-red-200: var(--status-error-text);
+  --color-red-300: var(--status-error-text);
+  --color-red-400: var(--status-error-text);
+  --color-red-500: var(--status-error-text);
+  --color-red-600: var(--status-error-text);
+  --color-red-700: var(--status-error-text);
+  --color-red-800: var(--status-error-text);
+  --color-red-900: var(--status-error-text);
+  --color-red-950: var(--status-error-text);
+  --color-rose-50: var(--status-error-text);
+  --color-rose-100: var(--status-error-text);
+  --color-rose-200: var(--status-error-text);
+  --color-rose-300: var(--status-error-text);
+  --color-rose-400: var(--status-error-text);
+  --color-rose-500: var(--status-error-text);
+  --color-rose-600: var(--status-error-text);
+  --color-rose-700: var(--status-error-text);
+  --color-rose-800: var(--status-error-text);
+  --color-rose-900: var(--status-error-text);
+  --color-rose-950: var(--status-error-text);
+  --color-amber-50: var(--status-warning-text);
+  --color-amber-100: var(--status-warning-text);
+  --color-amber-200: var(--status-warning-text);
+  --color-amber-300: var(--status-warning-text);
+  --color-amber-400: var(--status-warning-text);
+  --color-amber-500: var(--status-warning-text);
+  --color-amber-600: var(--status-warning-text);
+  --color-amber-700: var(--status-warning-text);
+  --color-amber-800: var(--status-warning-text);
+  --color-amber-900: var(--status-warning-text);
+  --color-amber-950: var(--status-warning-text);
+  --color-yellow-50: var(--status-warning-text);
+  --color-yellow-100: var(--status-warning-text);
+  --color-yellow-200: var(--status-warning-text);
+  --color-yellow-300: var(--status-warning-text);
+  --color-yellow-400: var(--status-warning-text);
+  --color-yellow-500: var(--status-warning-text);
+  --color-yellow-600: var(--status-warning-text);
+  --color-yellow-700: var(--status-warning-text);
+  --color-yellow-800: var(--status-warning-text);
+  --color-yellow-900: var(--status-warning-text);
+  --color-yellow-950: var(--status-warning-text);
+  --color-orange-50: var(--status-warning-text);
+  --color-orange-100: var(--status-warning-text);
+  --color-orange-200: var(--status-warning-text);
+  --color-orange-300: var(--status-warning-text);
+  --color-orange-400: var(--status-warning-text);
+  --color-orange-500: var(--status-warning-text);
+  --color-orange-600: var(--status-warning-text);
+  --color-orange-700: var(--status-warning-text);
+  --color-orange-800: var(--status-warning-text);
+  --color-orange-900: var(--status-warning-text);
+  --color-orange-950: var(--status-warning-text);
+}

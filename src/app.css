@@ -1,6 +1,8 @@
 @import './theme.css' layer(base);
 
 @import 'tailwindcss';
+/* unlayered: transitional palette remap for the app surface (see the file header) */
+@import './themes/compat-app.css';
 
 @source "./lib/components/ui/**/*.svelte";
 

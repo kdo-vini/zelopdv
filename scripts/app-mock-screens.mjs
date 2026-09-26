@@ -35,7 +35,7 @@ const prods = [
   P(15, 'Brigadeiro', 4, 3.5), P(17, 'Açaí 500ml', 4, 18), P(16, 'Bolo de cenoura (fatia)', 4, 8.9),
 ];
 const tables = {
-  subscriptions: [{ id: 's1', user_id: UID, status: 'active', plan_tier: 'pdv', current_period_end: future, has_zelo_menu: false, has_mesas: false, has_acessos: false }],
+  subscriptions: [{ id: 's1', user_id: UID, status: 'active', plan_tier: 'pdv', current_period_end: future, has_zelo_menu: false, has_mesas: !!process.env.MESAS, has_acessos: false }],
   empresa_perfil: [{ id: 'e1', user_id: UID, nome_exibicao: 'Padaria Bom Dia', contato: '11999990000', documento: '11222333000181', tabelas_preco_ativo: true, tabela_preco_1_nome: 'Balcão', tabela_preco_2_nome: 'iFood', tabela_preco_3_nome: 'Atacado', onboarding_completed: true, plataformas_pagamento: [] }],
   zelomenu_modifier_groups: [
     { id: 901, id_produto: 17, nome: 'Tamanho', tipo: 'variacao', modo_preco: 'substituir', min_selecoes: 1, max_selecoes: 1, permite_quantidade: false, ativo: true, ordem: 1 },
@@ -46,7 +46,7 @@ const tables = {
     { id: 921, id_grupo: 902, nome: 'Granola', price_delta: 2, ativo: true, ordem: 1 }, { id: 922, id_grupo: 902, nome: 'Leite condensado', price_delta: 3, ativo: true, ordem: 2 }, { id: 923, id_grupo: 902, nome: 'Banana', price_delta: 0, ativo: true, ordem: 3 },
   ],
   access_users: [], categorias: process.env.EMPTY ? [] : cats, subcategorias: [], produtos: process.env.EMPTY ? [] : prods,
-  caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date().toISOString(), data_fechamento: null, valor_inicial: 200 }],
+  caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date(new Date().setHours(8, 0, 0, 0)).toISOString(), data_fechamento: null, valor_inicial: 200 }],
 };
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, locale: 'pt-BR', reducedMotion: process.env.MOTION ? 'no-preference' : 'reduce' });

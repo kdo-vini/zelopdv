@@ -51,7 +51,12 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
   - **Fase 3 — autenticação** (atrás da flag): `AuthLayout` navy + cartão
     claro `data-surface="app"`; `.auth-*` restilizados só no cartão. Legado
     idêntico em página inteira (login, cadastro, esqueci, redefinir, indica).
-  - Próximo: Fase 4 — resto do sistema (mesas, pedidos, cozinha, gestão…).
+  - **Fase 4 — início**: `src/themes/compat-app.css` remapeia a paleta
+    Tailwind só em `[data-surface="app"]` (transitório), deixando mesas,
+    pedidos, gestão, relatórios, perfil, assinatura e ferramentas legíveis
+    atrás da flag. Legado idêntico. Harness com hora de abertura fixa.
+  - Próximo: reescrever tela a tela (mesas → pedidos/cozinha → gestão/produtos
+    → relatórios + charts → perfil/assinatura/ferramentas), depois Fases 5 e 6.
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 
