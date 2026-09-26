@@ -20,6 +20,8 @@
   import { capturePostHogEvent } from '$lib/posthogClient';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao } from '$lib/googleAds';
+  import { MoneyText } from '$lib/components/zelo';
+  import { zeloSurface } from '$lib/theme/surface.js';
   import {
     CircleCheckBig,
     Hourglass,
@@ -64,6 +66,8 @@
   let pixNow = Date.now();
   let pixModalOpen = false;
   let pixAutoRenewing = false;
+  let pixCopied = false;
+  let pixCopyTimer = null;
 
   // Fase 2.1 do onboarding em dois passos: CPF/CNPJ saiu do wizard e virou um
   // campo inline aqui, na etapa de pagamento — só aparece quando o perfil
@@ -457,6 +461,15 @@
 
   function closePixModal() {
     pixModalOpen = false;
+    pixCopied = false;
+  }
+
+  function copyPixCode() {
+    navigator.clipboard?.writeText(pixPayment?.brCode || '').catch(() => {});
+    pixCopied = true;
+    if (pixCopyTimer) window.clearTimeout(pixCopyTimer);
+    pixCopyTimer = window.setTimeout(() => (pixCopied = false), 1800);
+    addToast('Código Pix copiado.', 'success');
   }
 
   function startPixStatusPolling() {
@@ -471,6 +484,7 @@
   onDestroy(() => {
     stopPixStatusPolling();
     stopPixClock();
+    if (pixCopyTimer) window.clearTimeout(pixCopyTimer);
   });
 
   onMount(async () => {
@@ -952,7 +966,7 @@
   <meta name="description" content="Monte seu plano ZeloPDV, escolha extensões e pague com Pix ou cartão no fluxo de assinatura do Zelo.">
 </svelte:head>
 
-<section class="assinatura-container">
+<section class="assinatura-container" class:zelo-assinatura={$zeloSurface}>
   <p class="breadcrumb">Conta / Assinatura</p>
   <h1 class="text-xl font-bold text-slate-100 tracking-tight">Sua assinatura Zelo</h1>
   <p class="subtitle">Escolha o pacote, ajuste os módulos e finalize com Pix ou cartão em poucos passos.</p>
@@ -1314,7 +1328,9 @@
         </div>
         <div class="summary-total">
           <span>Total mensal</span>
-          <strong>R$ {planPrice}</strong>
+          <strong>
+            {#if $zeloSurface}<MoneyText value={planPrice} size="md" animate />{:else}R$ {planPrice}{/if}
+          </strong>
         </div>
       </div>
     </div>
@@ -1640,7 +1656,9 @@
         </div>
         <div class="summary-total">
           <span>Total mensal</span>
-          <strong>R$ {planPrice}</strong>
+          <strong>
+            {#if $zeloSurface}<MoneyText value={planPrice} size="md" animate />{:else}R$ {planPrice}{/if}
+          </strong>
         </div>
       </div>
     </div>
@@ -1718,12 +1736,10 @@
             <button
               type="button"
               class="btn-primary"
-              on:click={() => {
-                navigator.clipboard?.writeText(pixPayment.brCode);
-                addToast('Código Pix copiado.', 'success');
-              }}
+              class:pix-copied={pixCopied}
+              on:click={copyPixCode}
             >
-              Copiar código Pix
+              {#if pixCopied}<CircleCheckBig class="size-5" aria-hidden="true" /> Copiado{:else}Copiar código Pix{/if}
             </button>
             <button
               type="button"
@@ -2917,6 +2933,178 @@
     .addon-choice.disabled,
     .addon-choice:hover .addon-tooltip, .addon-choice:focus-visible .addon-tooltip {
       transform: none;
+    }
+  }
+
+  /* Zelo App surface — presentation only; the legacy branch keeps the rules above. */
+  .zelo-assinatura {
+    margin-top: 1.5rem;
+    gap: 1.1rem;
+  }
+
+  .zelo-assinatura .subtitle {
+    line-height: 1.55;
+  }
+
+  .zelo-assinatura .status-card,
+  .zelo-assinatura .checkout-shell,
+  .zelo-assinatura .checkout-summary,
+  .zelo-assinatura .current-package-card {
+    border-radius: var(--zelo-radius-card);
+  }
+
+  .zelo-assinatura .checkout-shell,
+  .zelo-assinatura .mobile-step-pagination,
+  .zelo-assinatura .mobile-sticky-summary {
+    box-shadow: var(--elevation-card);
+  }
+
+  .zelo-assinatura .checkout-track {
+    transition-duration: var(--zelo-dur-slow);
+    transition-timing-function: var(--zelo-ease-spring);
+  }
+
+  .zelo-assinatura .step-chip,
+  .zelo-assinatura .btn-primary,
+  .zelo-assinatura .btn-secondary,
+  .zelo-assinatura .btn-danger-outline,
+  .zelo-assinatura .plan-card,
+  .zelo-assinatura .addon-choice,
+  .zelo-assinatura .payment-card {
+    transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring), border-color var(--zelo-dur-fast), background-color var(--zelo-dur-fast), box-shadow var(--zelo-dur-fast), color var(--zelo-dur-fast), opacity var(--zelo-dur-fast);
+  }
+
+  .zelo-assinatura .step-chip:active,
+  .zelo-assinatura .btn-primary:active:not(:disabled),
+  .zelo-assinatura .btn-secondary:active:not(:disabled),
+  .zelo-assinatura .btn-danger-outline:active:not(:disabled),
+  .zelo-assinatura .plan-card:active:not(:disabled),
+  .zelo-assinatura .addon-choice:active:not(:disabled),
+  .zelo-assinatura .payment-card:active:not(:disabled) {
+    transform: scale(var(--zelo-press-scale));
+    transition-duration: var(--zelo-dur-fast);
+  }
+
+  .zelo-assinatura .step-chip:focus-visible,
+  .zelo-assinatura .btn-primary:focus-visible,
+  .zelo-assinatura .btn-secondary:focus-visible,
+  .zelo-assinatura .btn-danger-outline:focus-visible,
+  .zelo-assinatura .plan-card:focus-visible,
+  .zelo-assinatura .addon-choice:focus-visible,
+  .zelo-assinatura .payment-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  .zelo-assinatura .step-chip,
+  .zelo-assinatura .btn-primary,
+  .zelo-assinatura .btn-secondary,
+  .zelo-assinatura .btn-danger-outline {
+    border-radius: var(--zelo-radius-control);
+  }
+
+  .zelo-assinatura .plan-card,
+  .zelo-assinatura .addon-choice,
+  .zelo-assinatura .payment-card,
+  .zelo-assinatura .documento-field,
+  .zelo-assinatura .step-total-spotlight {
+    border-radius: var(--zelo-radius-card);
+  }
+
+  .zelo-assinatura .plan-card.selected,
+  .zelo-assinatura .plan-card.current.selected,
+  .zelo-assinatura .plan-card.bundle.selected,
+  .zelo-assinatura .addon-choice.selected {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 5%, var(--bg-card));
+    box-shadow: 0 0 0 1px var(--primary);
+  }
+
+  .zelo-assinatura .plan-card-decision .plan-price,
+  .zelo-assinatura .summary-total strong,
+  .zelo-assinatura .step-total-spotlight strong,
+  .zelo-assinatura .mobile-sticky-copy strong,
+  .zelo-assinatura .renewal-summary strong {
+    font-family: var(--type-num-lg-font);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--type-num-lg-tracking);
+  }
+
+  .zelo-assinatura .selector-title,
+  .zelo-assinatura .summary-title {
+    font-family: var(--type-title-font);
+    letter-spacing: var(--type-title-tracking);
+  }
+
+  .zelo-assinatura .field-input {
+    min-height: 44px;
+    border-radius: var(--zelo-radius-control);
+  }
+
+  .zelo-assinatura .field-input:focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  :global([data-surface="app"]) .pix-modal-close {
+    transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring), border-color var(--zelo-dur-fast), background-color var(--zelo-dur-fast), box-shadow var(--zelo-dur-fast), color var(--zelo-dur-fast), opacity var(--zelo-dur-fast);
+  }
+
+  :global([data-surface="app"]) .pix-modal-close:active {
+    transform: scale(var(--zelo-press-scale));
+    transition-duration: var(--zelo-dur-fast);
+  }
+
+  :global([data-surface="app"]) .pix-modal-close:focus-visible,
+  :global([data-surface="app"]) .pix-copy-field textarea:focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  :global([data-surface="app"]) .pix-modal-title {
+    font-family: var(--type-title-font);
+    letter-spacing: var(--type-title-tracking);
+  }
+
+  :global([data-surface="app"]) .pix-countdown strong {
+    font-family: var(--type-num-lg-font);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--type-num-lg-tracking);
+  }
+
+  :global([data-surface="app"]) .pix-copied {
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 560px) {
+    .zelo-assinatura {
+      margin-top: 1rem;
+    }
+
+    .zelo-assinatura .field-input,
+    :global([data-surface="app"]) .pix-copy-field textarea {
+      min-height: 48px;
+      font-size: 16px;
+    }
+
+    :global([data-surface="app"]) .pix-modal {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      padding-top: 1.5rem;
+    }
+
+    :global([data-surface="app"]) .pix-modal::before {
+      content: '';
+      position: absolute;
+      top: 0.55rem;
+      left: 50%;
+      width: 2.5rem;
+      height: 0.25rem;
+      border-radius: var(--zelo-radius-pill);
+      background: var(--border-strong);
+      transform: translateX(-50%);
     }
   }
 </style>

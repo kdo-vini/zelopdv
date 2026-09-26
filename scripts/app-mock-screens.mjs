@@ -10,6 +10,7 @@
  * in order), KEYS (keys to press after), OPEN_CART, VP (WxH), OUT (png path without extension), CHROMIUM_PATH,
  * STEPS (after the rest: comma list of `key:<Key>`, `click:<accessible name>`, `wait:<ms>`), MOTION=1 (real motion),
  * NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
+ * BILLING=1 mocks the local Pix create/status endpoints for subscription screenshots.
  * LOAD_STATE (default networkidle; use domcontentloaded for pages with persistent connections).
  * WAIT_AFTER (milliseconds after navigation; default 2500).
  * docs/DESIGN_SYSTEM.md → Verificação.
@@ -116,6 +117,25 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   }
   return json({});
 });
+if (process.env.BILLING) {
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  await ctx.route('**/api/billing/pix/create', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      paymentId: 'pix_mock_1',
+      status: 'pending',
+      expiresAt,
+      brCode: '00020126580014BR.GOV.BCB.PIX0136mock-zelo-pdv-assinatura-520400005303986540659.005802BR5920ZELO PDV MOCK6009SAO PAULO62070503***6304ABCD',
+      qrCodeBase64: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"%3E%3Crect width="120" height="120" fill="white"/%3E%3Cpath d="M8 8h32v32H8zm72 0h32v32H80zM8 80h32v32H8zm48-24h16v16H56zm24 24h12v12H80zm16 16h16v16H96zM52 92h20v20H52z" fill="%23011F4A"/%3E%3C/svg%3E',
+    }),
+  }));
+  await ctx.route('**/api/billing/pix/status/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ paymentId: 'pix_mock_1', status: 'pending', expiresAt }),
+  }));
+}
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
 await page.goto(`${BASE}${process.env.ROUTE || '/app'}${QS}`, { waitUntil: LOAD_STATE });
