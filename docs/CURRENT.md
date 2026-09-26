@@ -64,6 +64,10 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     mapa, comanda da mesa e sheet "Fechar mesa" no Design System; parcial,
     pré-conta, trocar de mesa e recibo com visual de sheet (escopo `app`).
     Sem total/pessoas no mapa (decisão do dono). Legado idêntico a main.
+  - **Fase 4 — Pedidos e Cozinha** (mockup 02 aprovado): fila com detalhe em
+    blur e próxima etapa em MorphButton, logo do iFood na moldura redonda;
+    cozinha clara com letra maior, âmbar a partir de 15 min e um botão
+    "Marcar pedido pronto" (os "Marcar" por item chamavam a mesma função).
   - Dono aprovou o visual interno (2026-09-26). **Por último:** refazer as
     capturas da landing (hero, "Vendeu bem…", cards, `PhoneShot`) com a UI nova.
 

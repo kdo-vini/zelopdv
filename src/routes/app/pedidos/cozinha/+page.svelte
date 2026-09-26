@@ -18,6 +18,10 @@
   import { fetchIfoodSyncState, sendIfoodCommand } from '$lib/orders/ifoodCommandsClient.js';
   import OrderSourceBadge from '$lib/components/orders/OrderSourceBadge.svelte';
   import IfoodSyncState from '$lib/components/orders/IfoodSyncState.svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import { MorphButton } from '$lib/components/zelo';
+  import { Button } from '$lib/components/ui/button';
+  import { CalendarClock, Check, ChefHat, ChevronLeft, Flame, RefreshCw, X } from 'lucide-svelte';
 
   let ownerUserId = '';
   let empresaId = '';
@@ -264,6 +268,116 @@
       <p>Ative o ZeloMenu para usar o painel de preparo.</p>
       <a href="/assinatura?addon=menu">Ativar ZeloMenu</a>
     </section>
+  </main>
+{:else if $zeloSurface}
+  <!-- Zelo Design System (mockup 02 aprovado): clara, letra maior para leitura à distância. Same handlers and checks as the legacy branch below. -->
+  <main class="zk">
+    <header class="zk-head">
+      <div>
+        <p class="zk-eyebrow"><a href="/app/pedidos" class="zk-back"><ChevronLeft size={13} strokeWidth={1.75} aria-hidden="true" />Pedidos</a> / Cozinha</p>
+        <h1 class="zk-title">Cozinha</h1>
+      </div>
+      <div class="zk-head-acts">
+        <span class="zk-pill"><b>{pedidosAbertos.length}</b> em preparo</span>
+        <span class="zk-pill ok"><i aria-hidden="true"></i><b>{pedidosProntos.length}</b> {pedidosProntos.length === 1 ? 'pronto' : 'prontos'}</span>
+        <span class="zk-pill"><b>{totalItensPendentes}</b> itens abertos</span>
+        <Button variant="outlined" size="md" onclick={loadPedidos} disabled={loading || refreshing}><RefreshCw strokeWidth={1.75} class={refreshing ? 'zk-spin' : ''} />{refreshing ? 'Atualizando' : 'Atualizar'}</Button>
+      </div>
+    </header>
+
+    {#if !canCancelOrders}
+      <InlineHelper id="cozinha-cancel-hint" compact message="Seu cargo não pode cancelar pedidos. Peça essa ação ao responsável pela operação." />
+    {/if}
+
+    {#if loading}
+      <p class="zk-muted">Carregando cozinha…</p>
+    {:else if pedidosVisiveis.length === 0 && pedidosAgendados.length === 0}
+      <div class="zk-empty"><ChefHat size={32} strokeWidth={1.5} aria-hidden="true" /><p>Nenhum item enviado para a cozinha.</p></div>
+    {:else}
+      {#if pedidosAgendados.length}
+        <section class="zk-sched" aria-label="Pedidos agendados">
+          <p class="zk-eyebrow"><CalendarClock size={13} strokeWidth={1.75} aria-hidden="true" />Agendados</p>
+          <ul>
+            {#each pedidosAgendados as pedido (pedido.id)}
+              <li><OrderSourceBadge order={pedido} onlyExternal />{pedidoTitulo(pedido)}<b>preparo a partir de {horaCurta(pedido.ifood?.preparationStartAt)}</b></li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
+
+      <section class="zk-board">
+        <div class="zk-lane">
+          <h2 class="zk-lane-h">Em preparo <span>{pedidosAbertos.length}</span></h2>
+          <div class="zk-grid">
+            {#each pedidosAbertos as pedido (pedido.id)}
+              {@const pendentes = pedido.itens.filter((i) => !itemPronto(i)).length}
+              <article class="zk-card" class:preparing={pedido.status === 'preparing'} class:late={(nowTick - Date.parse(pedido.criado_em)) / 60000 >= 15}>
+                <header class="zk-card-h">
+                  <div class="zk-card-id">
+                    {#if isIfoodOrder(pedido)}<OrderSourceBadge order={pedido} />{/if}
+                    <h3>{pedidoTitulo(pedido)}</h3>
+                    <p>{#if pedidoSubtitulo(pedido)}<span class="zk-mono">{pedidoSubtitulo(pedido)}</span> · {/if}{pedido.status === 'preparing' ? 'Em preparo' : 'Aguardando início'}</p>
+                  </div>
+                  <div class="zk-card-r">
+                    <span class="zk-time">{minutosDesde(pedido.criado_em)}</span>
+                    <button type="button" class="zk-x" aria-label="Cancelar pedido" aria-describedby={!canCancelOrders ? 'cozinha-cancel-hint' : undefined} disabled={!canCancelOrders || isIfoodOrder(pedido)} title={isIfoodOrder(pedido) ? 'Cancele pedidos do iFood pela tela de Pedidos' : undefined} on:click={() => excluirPedido(pedido)}><X size={16} strokeWidth={1.75} /></button>
+                  </div>
+                </header>
+                {#if isIfoodOrder(pedido)}<IfoodSyncState order={pedido} syncState={ifoodSync[pedido.id] || null} now={nowTick} compact />{/if}
+                {#if pedido.observacoes}<p class="zk-obs">{pedido.observacoes}</p>{/if}
+                <p class="zk-prog">{pendentes} de {pedido.itens.length} {pendentes === 1 ? 'pendente' : 'pendentes'}</p>
+                <ul>
+                  {#each pedido.itens as item (item.id)}
+                    {@const montagem = itemModifierGroups(item)}
+                    <li class:done={itemPronto(item)}>
+                      <span class="zk-q">{Number(item.quantidade)}×</span>
+                      <div>
+                        <p class="zk-nm">{item.nome}</p>
+                        {#each montagem as grupo (grupo.groupName)}<p class="zk-mod">{grupo.groupName}: {grupo.optionNames.join(', ')}</p>{/each}
+                      </div>
+                      {#if itemPronto(item)}<span class="zk-done"><Check size={16} strokeWidth={2} aria-hidden="true" />Pronto</span>{/if}
+                    </li>
+                  {/each}
+                </ul>
+                {#if pedido.status === 'accepted'}
+                  <MorphButton state={comandoIfoodPendente(pedido) ? 'loading' : 'idle'} size="touch" class="zk-cta" loadingLabel="Aguardando o iFood…" onclick={() => marcarPedidoPreparando(pedido)}>
+                    <Flame size={18} strokeWidth={1.75} aria-hidden="true" />Iniciar preparo
+                  </MorphButton>
+                {:else}
+                  <MorphButton
+                    state={isMarking(pedido) || comandoIfoodPendente(pedido) ? 'loading' : 'idle'}
+                    size="touch"
+                    class="zk-cta"
+                    loadingLabel="Marcando pronto…"
+                    onclick={() => marcarPedidoPronto(pedido)}
+                    disabled={pendentes === 0 || pedido.status !== 'preparing' || resolveKitchenAdvance(pedido, 'ready').kind === 'none'}
+                  >
+                    <Check size={18} strokeWidth={1.75} aria-hidden="true" />Marcar pedido pronto
+                  </MorphButton>
+                {/if}
+              </article>
+            {/each}
+            {#if pedidosAbertos.length === 0}<p class="zk-muted">Nada em preparo agora.</p>{/if}
+          </div>
+        </div>
+
+        <div class="zk-lane ready">
+          <h2 class="zk-lane-h">Prontos <span>{pedidosProntos.length}</span></h2>
+          <div class="zk-ready">
+            {#each pedidosProntos as pedido (pedido.id)}
+              <article class="zk-rcard">
+                <div>
+                  {#if isIfoodOrder(pedido)}<OrderSourceBadge order={pedido} />{/if}
+                  <h3>{pedidoTitulo(pedido)}</h3>
+                  <p>{#if pedidoSubtitulo(pedido)}<span class="zk-mono">{pedidoSubtitulo(pedido)}</span> · {/if}{pedido.itens.length} {pedido.itens.length === 1 ? 'item' : 'itens'}</p>
+                </div>
+                <button type="button" class="zk-x" aria-label="Cancelar pedido" aria-describedby={!canCancelOrders ? 'cozinha-cancel-hint' : undefined} disabled={!canCancelOrders || isIfoodOrder(pedido)} title={isIfoodOrder(pedido) ? 'Cancele pedidos do iFood pela tela de Pedidos' : undefined} on:click={() => excluirPedido(pedido)}><X size={16} strokeWidth={1.75} /></button>
+              </article>
+            {/each}
+          </div>
+        </div>
+      </section>
+    {/if}
   </main>
 {:else}
   <main class="kitchen-shell">
@@ -907,5 +1021,65 @@
   .scheduled-time {
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* ═══ Cozinha · Zelo Design System (only when $zeloSurface; mockup 02) — light, larger type for reading at a distance ═══ */
+  .zk { display: flex; flex-direction: column; gap: 16px; min-height: 100%; padding: 24px 28px; background: var(--bg-app); color: var(--text-main); font-family: var(--zelo-font-ui); }
+  .zk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .zk-eyebrow { margin: 0; display: inline-flex; align-items: center; gap: 5px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  .zk-back { display: inline-flex; align-items: center; gap: 2px; color: var(--text-label); text-decoration: none; }
+  .zk-title { margin: 6px 0 0; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  .zk-head-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .zk-pill { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-pill); background: var(--bg-panel); font: var(--type-label); color: var(--text-label); }
+  .zk-pill b { font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); color: var(--text-main); }
+  .zk-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--status-success-text); }
+  .zk-head-acts :global(.zk-spin) { animation: zk-spin 0.8s linear infinite; }
+  @keyframes zk-spin { to { transform: rotate(360deg); } }
+  .zk-muted { margin: 0; font: var(--type-body); color: var(--text-muted); }
+  .zk-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 64px 24px; border: 1.5px dashed var(--border-strong); border-radius: var(--zelo-radius-card); color: var(--text-muted); text-align: center; }
+  .zk-empty p { margin: 0; font: var(--type-body); }
+  .zk-sched { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-panel); flex-wrap: wrap; }
+  .zk-sched ul { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
+  .zk-sched li { border: 0; grid-template-columns: none; display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 9px; background: var(--bg-sunken); font: var(--type-label); color: var(--text-label); }
+  .zk-sched li b { font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); color: var(--text-main); }
+  .zk-board { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+  .zk-lane-h { margin: 0 0 10px; display: flex; gap: 8px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  .zk-lane-h span { color: var(--text-main); }
+  .zk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .zk-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-card); }
+  .zk-card.preparing { border-color: var(--border-strong); }
+  .zk-card.late { border-color: var(--status-warning-border); box-shadow: 0 0 0 1px var(--status-warning-border); }
+  .zk-card.late .zk-time { color: var(--status-warning-text); }
+  .zk-card-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .zk-card-id { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .zk-card-id h3, .zk-rcard h3 { margin: 0; font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-weight: 600; overflow-wrap: anywhere; }
+  .zk-card-id p, .zk-rcard p { margin: 0; font: var(--type-caption); font-size: 13px; color: var(--text-muted); }
+  .zk-mono { font-family: var(--zelo-font-num); color: var(--text-label); }
+  .zk-card-r { display: flex; align-items: center; gap: 6px; flex: none; }
+  .zk-time { font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-weight: 600; color: var(--text-main); white-space: nowrap; }
+  /* the legacy stylesheet styles bare button/ul/li; reset them inside the Zelo branch */
+  .zk-x { display: grid; place-items: center; width: 32px; height: 32px; min-height: 0; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); font-weight: 400; }
+  .zk-x:hover:not(:disabled) { background: var(--status-error-bg); }
+  .zk .zk-card ul, .zk .zk-sched ul { display: block; gap: 0; }
+  .zk-x:hover:not(:disabled) { background: var(--status-error-bg); color: var(--status-error-text); }
+  .zk-x:disabled { opacity: 0.35; }
+  .zk-obs { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--status-warning-bg); color: var(--status-warning-text); font: var(--type-body); }
+  .zk-prog { margin: 0; font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); color: var(--text-muted); }
+  .zk-card ul { list-style: none; margin: 0; padding: 0; }
+  .zk-card li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 10px 0; border: 0; border-top: 1px solid var(--border-subtle); border-radius: 0; background: none; opacity: 1; }
+  .zk-q { font: var(--type-num-lg); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .zk-nm { margin: 0; font: var(--type-body-strong); font-size: 17px; line-height: 1.25; }
+  .zk-mod { margin: 2px 0 0; font: var(--type-caption); font-size: 13px; color: var(--text-muted); }
+  .zk-card li.done .zk-nm { color: var(--text-muted); text-decoration: line-through; }
+  .zk-done { display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px; border-radius: 9px; background: var(--status-success-bg); color: var(--status-success-text); font: var(--type-label); }
+  .zk-card :global(.zk-cta) { width: 100%; margin-top: 4px; }
+  .zk-ready { display: flex; flex-direction: column; gap: 8px; }
+  .zk-rcard { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 14px; border: 1px solid var(--status-success-border); border-radius: var(--zelo-radius-card); background: var(--status-success-bg); }
+  .zk-rcard p { color: var(--status-success-text); margin-top: 3px; }
+  @media (max-width: 1023px) { .zk-board { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 767px) {
+    .zk { padding: 16px; }
+    .zk-head-acts .zk-pill:last-of-type { display: none; }
+    .zk-grid { grid-template-columns: minmax(0, 1fr); }
   }
 </style>
