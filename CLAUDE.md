@@ -193,6 +193,12 @@ Estado validado mais recente está em [[CURRENT]].
 ## Convenções relevantes
 
 - Antes de qualquer mudança de UI (tela, componente, cabeçalho, botão, navegação), consultar [[DESIGN_PATTERNS]] e reutilizar o padrão existente em vez de inventar.
+- **Design System Zelo — regras permanentes até o fim da migração (pedido do dono, 2026-09-26):**
+  - Todo mockup (`docs/design-system/mockups/`) e toda tela implementada **já nascem com o movimento** de `docs/design-system/reference/zelopdv-morph.html` (molas, troca com blur curto, squash no clique, indicador líquido, botão → loader → check, números que contam; `src/lib/motion/` no app, `_mk.py` → `MOTION_CSS`/`MOTION_JS`/`morph_cta` nos mockups). Não é preciso o dono pedir.
+  - Mockup por tela, aprovação do dono uma a uma antes de implementar.
+  - Bottom nav original do celular (`MobileBottomNav`: PDV, Gestão, Financeiro, Outros, Perfil) — nunca trocar.
+  - Pedidos do iFood com a logo na moldura redonda (`OrderSourceBadge`, `static/ifood-logo.png`).
+  - Só apresentação; sem leituras/escritas novas sem o dono aprovar. Legado pixel-idêntico a `main` sem `?tema=novo`.
 - Não hardcode hex em componentes; usar variáveis de tema. Código novo segue o Design System Zelo (`docs/DESIGN_SYSTEM.md`): tokens semânticos, componentes de `src/lib/components/zelo/`, e o arquivo entra em `scripts/ui-migrated.json`.
 - JSON-LD em Svelte deve usar `{@html}`.
 - Para mudanças profundas: atualizar [[CURRENT]], [[FIXES_PROGRESS]], [[ZeloPDV.memory]] e, se aplicável, [[INCIDENTS]].

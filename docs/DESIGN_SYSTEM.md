@@ -203,6 +203,14 @@ Uso:
 
 Aplicado hoje: componentes `zelo/` (inclui `Sheet`, `ZeloToaster`, `MoneyText` → `num-md|lg|xl`), `PaymentMethodGrid`, sidebar (rótulos de seção em `eyebrow`), bottom nav, `ModalPagamento` (título `heading`, rótulos `eyebrow`) e o `/app` (`h1` em `title`, breadcrumb em `eyebrow`, números em `num-*`).
 
+## Regras do dono para a Fase 4 em diante
+
+  - Todo mockup (`docs/design-system/mockups/`) e toda tela implementada **já nascem com o movimento** de `docs/design-system/reference/zelopdv-morph.html` (molas, troca com blur curto, squash no clique, indicador líquido, botão → loader → check, números que contam; `src/lib/motion/` no app, `_mk.py` → `MOTION_CSS`/`MOTION_JS`/`morph_cta` nos mockups). Não é preciso o dono pedir.
+  - Mockup por tela, aprovação do dono uma a uma antes de implementar.
+  - Bottom nav original do celular (`MobileBottomNav`: PDV, Gestão, Financeiro, Outros, Perfil) — nunca trocar.
+  - Pedidos do iFood com a logo na moldura redonda (`OrderSourceBadge`, `static/ifood-logo.png`).
+  - Só apresentação; sem leituras/escritas novas sem o dono aprovar. Legado pixel-idêntico a `main` sem `?tema=novo`.
+
 ## Regras de código
 
 1. **Cor só por token.** Arquivos em `scripts/ui-migrated.json` não podem ter classe de paleta Tailwind, `text-white`/`bg-black`, hex nem `rgb()/rgba()/hsl()`. `npm run check:ui` (no CI) barra. Exceção pontual: comentário `ui-allow: <motivo>` na linha.

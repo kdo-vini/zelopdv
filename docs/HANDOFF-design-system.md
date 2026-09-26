@@ -22,6 +22,13 @@ Você vai continuar a migração do ZeloPDV para o **Design System Zelo** na bra
 - Harness para ver telas logadas sem Supabase real: `scripts/app-mock-screens.mjs` (leia o cabeçalho).
 
 ### Regras que valem para tudo
+- **Regras permanentes do dono (2026-09-26):**
+  - Todo mockup (`docs/design-system/mockups/`) e toda tela implementada **já nascem com o movimento** de `docs/design-system/reference/zelopdv-morph.html` (molas, troca com blur curto, squash no clique, indicador líquido, botão → loader → check, números que contam; `src/lib/motion/` no app, `_mk.py` → `MOTION_CSS`/`MOTION_JS`/`morph_cta` nos mockups). Não é preciso o dono pedir.
+  - Mockup por tela, aprovação do dono uma a uma antes de implementar.
+  - Bottom nav original do celular (`MobileBottomNav`: PDV, Gestão, Financeiro, Outros, Perfil) — nunca trocar.
+  - Pedidos do iFood com a logo na moldura redonda (`OrderSourceBadge`, `static/ifood-logo.png`).
+  - Só apresentação; sem leituras/escritas novas sem o dono aprovar. Legado pixel-idêntico a `main` sem `?tema=novo`.
+
 - **Legado intacto.** Mudança de estrutura só dentro de `{#if $zeloSurface}` (ou `$currentSurface`); o markup antigo fica no `{:else}` até a Fase 6. Mudança só de cor é via token.
 - **Cor só por token** (utilitários `bg-surface-*`, `text-ink*`, `border-line*`, `bg-action`, `text-action-fg`, `ring-focus`, `text-ok|warn|danger` e `-bg`/`-line`, ou `var(--…)`). Nada de hex, `rgb()`, classes de paleta Tailwind, `text-white` em código novo. Sombras e overlays usam `--shadow-color`/`--elevation-float`, **nunca** `--text-inverse` (fica branco na superfície clara).
 - Só apresentação nos PRs de migração: **zero mudança de lógica** (venda, offline, estoque, pagamento, permissões).
