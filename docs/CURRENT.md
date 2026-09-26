@@ -60,6 +60,8 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
   - **Fase 5 — parcial**: e-mails em navy/papel (hex literais espelham os
     tokens; clientes de e-mail não leem CSS vars), PWA `theme_color` e
     `<meta theme-color>` em `#011F4A`. Favicon/OG/logos aguardam os vetores.
+  - Dono aprovou o visual interno (2026-09-26). **Por último:** refazer as
+    capturas da landing (hero, "Vendeu bem…", cards, `PhoneShot`) com a UI nova.
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 
