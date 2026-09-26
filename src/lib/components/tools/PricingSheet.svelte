@@ -1475,4 +1475,81 @@
       height: 1.5rem;
     }
   }
+
+  :global([data-surface="app"]) .pricing-sheet {
+    gap: 1rem;
+    padding-inline: 1.5rem;
+  }
+
+  :global([data-surface="app"]) .summary-card,
+  :global([data-surface="app"]) .help-disclosure,
+  :global([data-surface="app"]) .sheet-shell,
+  :global([data-surface="app"]) .mobile-row {
+    background: var(--bg-card);
+    border-color: var(--border-card);
+    border-radius: var(--radius-card);
+  }
+
+  :global([data-surface="app"]) .summary-label,
+  :global([data-surface="app"]) .field-label,
+  :global([data-surface="app"]) .col-header {
+    font: var(--type-eyebrow);
+    letter-spacing: var(--type-eyebrow-tracking);
+  }
+
+  :global([data-surface="app"]) .summary-value,
+  :global([data-surface="app"]) .currency-prefix,
+  :global([data-surface="app"]) .currency-input,
+  :global([data-surface="app"]) .cell-meta,
+  :global([data-surface="app"]) .detail-value,
+  :global([data-surface="app"]) .sheet-table td.tabular-nums {
+    font: var(--type-num-md);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--type-num-md-tracking);
+  }
+
+  :global([data-surface="app"]) .summary-value {
+    font: var(--type-num-lg);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--type-num-lg-tracking);
+  }
+
+  :global([data-surface="app"]) .sheet-title {
+    font: var(--type-heading);
+    letter-spacing: var(--type-heading-tracking);
+  }
+
+  :global([data-surface="app"]) .field-input,
+  :global([data-surface="app"]) .cell-input {
+    border-radius: var(--radius-control);
+  }
+
+  :global([data-surface="app"]) button {
+    transition-timing-function: var(--zelo-ease-spring);
+  }
+
+  :global([data-surface="app"]) button:active {
+    transform: scale(0.965);
+  }
+
+  @media (max-width: 767px) {
+    :global([data-surface="app"]) .pricing-sheet {
+      padding-inline: 0;
+      padding-bottom: calc(var(--mobile-bottom-nav-offset) + 5rem);
+    }
+
+    :global([data-surface="app"]) .mobile-row {
+      padding: 1rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global([data-surface="app"]) button {
+      transition-duration: 0ms;
+    }
+
+    :global([data-surface="app"]) button:active {
+      transform: none;
+    }
+  }
 </style>

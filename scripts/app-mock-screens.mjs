@@ -10,6 +10,8 @@
  * in order), KEYS (keys to press after), OPEN_CART, VP (WxH), OUT (png path without extension), CHROMIUM_PATH,
  * STEPS (after the rest: comma list of `key:<Key>`, `click:<accessible name>`, `wait:<ms>`), MOTION=1 (real motion),
  * NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
+ * LOAD_STATE (default networkidle; use domcontentloaded for pages with persistent connections).
+ * WAIT_AFTER (milliseconds after navigation; default 2500).
  * docs/DESIGN_SYSTEM.md → Verificação.
  */
 import { chromium } from '@playwright/test';
@@ -17,6 +19,8 @@ const BASE = process.env.BASE || 'http://localhost:5174';
 const [W, H] = (process.env.VP || '1440x900').split('x').map(Number);
 const OUT = process.env.OUT || 'app';
 const QS = process.env.QS ?? '?tema=novo';
+const LOAD_STATE = process.env.LOAD_STATE || 'networkidle';
+const WAIT_AFTER = Number(process.env.WAIT_AFTER || 2500);
 const ADD = (process.env.ADD || '').split(',').filter(Boolean); // product names to click
 const OPEN_CART = !!process.env.OPEN_CART;
 const UID = '11111111-1111-4111-8111-111111111111';
@@ -114,8 +118,8 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
 });
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
-await page.goto(`${BASE}${process.env.ROUTE || '/app'}${QS}`, { waitUntil: 'networkidle' });
-await page.waitForTimeout(2500);
+await page.goto(`${BASE}${process.env.ROUTE || '/app'}${QS}`, { waitUntil: LOAD_STATE });
+await page.waitForTimeout(WAIT_AFTER);
 console.log('url', page.url());
 for (const name of ADD) {
   let done = false;

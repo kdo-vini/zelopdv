@@ -3,7 +3,9 @@
   import { supabase } from '$lib/supabaseClient';
   import { addToast } from '$lib/stores/ui';
   import { jsPDF } from 'jspdf';
+  import { ClipboardList } from 'lucide-svelte';
   import BackLink from '$lib/components/ui/BackLink.svelte';
+  import { zeloSurface } from '$lib/theme/surface.js';
 
   // ── State ──────────────────────────────────────────────────────────────
   let mode = 'sistema'; // 'sistema' | 'zero'
@@ -660,9 +662,24 @@
 </svelte:head>
 
 <!-- ────────────────────────────────────────────────────────────────────── -->
-<div class="max-w-(--breakpoint-xl) mx-auto">
+<div class="max-w-(--breakpoint-xl) mx-auto zelo-cardapio-shell">
 
   <!-- Header -->
+  {#if $zeloSurface}
+    <header class="zelo-cardapio-head">
+      <BackLink href="/ferramentas" label="Ferramentas" />
+      <div class="zelo-cardapio-title-row">
+        <span class="zelo-cardapio-title-icon" aria-hidden="true">
+          <ClipboardList size={20} strokeWidth={1.75} />
+        </span>
+        <div>
+          <p class="type-eyebrow">Ferramentas / Cardápio</p>
+          <h1 class="type-title">Cardápio Digital</h1>
+        </div>
+      </div>
+      <p class="type-body zelo-cardapio-subtitle">Monte e exporte seu cardápio para enviar pelo WhatsApp — sem precisar de designer.</p>
+    </header>
+  {:else}
   <div class="mb-6">
     <div class="mb-2">
       <BackLink href="/ferramentas" label="Ferramentas" />
@@ -675,11 +692,12 @@
     </div>
     <p class="text-sm" style="color: var(--text-muted);">Monte e exporte seu cardápio para enviar pelo WhatsApp — sem precisar de designer.</p>
   </div>
+  {/if}
 
-  <div class="flex flex-col xl:flex-row gap-6 items-start">
+  <div class="flex flex-col xl:flex-row gap-6 items-start zelo-cardapio-layout">
 
     <!-- ═══════════════════════════════ EDITOR ═══════════════════════════ -->
-    <div class="w-full xl:w-[420px] shrink-0 space-y-4">
+    <div class="w-full xl:w-[420px] shrink-0 space-y-4 zelo-cardapio-editor">
 
       <!-- Mode toggle -->
       <div class="flex rounded-xl p-1 gap-1" style="background: var(--bg-card); border: 1px solid var(--border-subtle);">
@@ -1255,7 +1273,7 @@
     </div>
 
     <!-- ════════════════════════════ PREVIEW ════════════════════════════ -->
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 zelo-cardapio-preview">
 
       <!-- Export buttons -->
       <div class="flex items-center justify-between mb-4">
@@ -1574,3 +1592,119 @@
 
   </div>
 </div>
+
+<style>
+  :global([data-surface="app"]) .zelo-cardapio-head {
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-title-row h1 {
+    margin-top: 0.25rem;
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-title-icon {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    background: var(--bg-sunken);
+    border-radius: var(--radius-control);
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-subtitle {
+    max-width: 65ch;
+    margin-top: 0.625rem;
+    color: var(--text-muted);
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-editor > div {
+    border-color: var(--border-card);
+    border-radius: var(--radius-card);
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-editor input[type="text"] {
+    min-height: 2.75rem;
+    border-radius: var(--radius-control);
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-editor input[type="text"]:focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-editor button,
+  :global([data-surface="app"]) .zelo-cardapio-preview button,
+  :global([data-surface="app"]) .zelo-cardapio-editor label > div,
+  :global([data-surface="app"]) .zelo-cardapio-editor label > div > span {
+    transition-timing-function: var(--zelo-ease-spring);
+    transition-duration: var(--zelo-dur-slow);
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-editor button:active,
+  :global([data-surface="app"]) .zelo-cardapio-preview button:active {
+    transform: scale(0.965);
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-preview {
+    width: 100%;
+  }
+
+  :global([data-surface="app"]) .zelo-cardapio-preview .cardapio-page {
+    max-width: 100%;
+  }
+
+  @media (min-width: 1280px) {
+    :global([data-surface="app"]) .zelo-cardapio-preview {
+      position: sticky;
+      top: 1.5rem;
+    }
+  }
+
+  @media (max-width: 767px) {
+    :global([data-surface="app"]) .zelo-cardapio-shell {
+      padding-bottom: calc(var(--mobile-bottom-nav-offset) + 1.5rem);
+    }
+
+    :global([data-surface="app"]) .zelo-cardapio-head {
+      margin-bottom: 1rem;
+    }
+
+    :global([data-surface="app"]) .zelo-cardapio-editor input {
+      font-size: 1rem;
+    }
+
+    :global([data-surface="app"]) .zelo-cardapio-preview > div:first-child {
+      align-items: flex-start;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global([data-surface="app"]) .zelo-cardapio-editor button,
+    :global([data-surface="app"]) .zelo-cardapio-preview button,
+    :global([data-surface="app"]) .zelo-cardapio-editor label > div,
+    :global([data-surface="app"]) .zelo-cardapio-editor label > div > span {
+      transition-duration: 0ms;
+    }
+
+    :global([data-surface="app"]) .zelo-cardapio-editor button:active,
+    :global([data-surface="app"]) .zelo-cardapio-preview button:active {
+      transform: none;
+    }
+  }
+</style>

@@ -1,4 +1,7 @@
 <script>
+  import { ArrowRight, Calculator, ClipboardList, TrendingUp } from "lucide-svelte";
+  import { zeloSurface } from "$lib/theme/surface.js";
+
   // Hub de ferramentas do empresário. Cada card leva a uma ferramenta.
   // Card inteiro é clicável; "Em breve" fica desabilitado (sinaliza roadmap).
   const tools = [
@@ -37,6 +40,56 @@
   <meta name="robots" content="noindex" />
 </svelte:head>
 
+{#if $zeloSurface}
+  <div class="zelo-tools-shell">
+    <header class="zelo-tools-head">
+      <div>
+        <p class="type-eyebrow">Outros / Ferramentas</p>
+        <h1 class="type-title">Ferramentas</h1>
+        <p class="type-body zelo-tools-subtitle">
+          Recursos extras para você precificar, divulgar e organizar o seu negócio.
+        </p>
+      </div>
+    </header>
+
+    <div class="zelo-tools-grid">
+      {#each tools as tool}
+        {#if tool.available}
+          <a class="zelo-tool-card" href={tool.href}>
+            <span class="zelo-tool-top">
+              <span class="zelo-tool-icon" aria-hidden="true">
+                {#if tool.title === "Precificação"}
+                  <Calculator size={22} strokeWidth={1.75} />
+                {:else}
+                  <ClipboardList size={22} strokeWidth={1.75} />
+                {/if}
+              </span>
+              <span class:zelo-tool-tag-free={tool.tag === "Grátis"} class="zelo-tool-tag type-caption">{tool.tag}</span>
+            </span>
+            <span class="type-heading">{tool.title}</span>
+            <span class="type-body zelo-tool-description">{tool.description}</span>
+            <span class="zelo-tool-cta type-label">
+              Abrir
+              <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
+            </span>
+          </a>
+        {:else}
+          <div class="zelo-tool-card zelo-tool-card-disabled" aria-disabled="true">
+            <span class="zelo-tool-top">
+              <span class="zelo-tool-icon" aria-hidden="true">
+                <TrendingUp size={22} strokeWidth={1.75} />
+              </span>
+              <span class="zelo-tool-tag type-caption">{tool.tag}</span>
+            </span>
+            <span class="type-heading">{tool.title}</span>
+            <span class="type-body zelo-tool-description">{tool.description}</span>
+            <span class="zelo-tool-cta type-label">Em breve</span>
+          </div>
+        {/if}
+      {/each}
+    </div>
+  </div>
+{:else}
 <div class="hub-shell">
   <header class="hub-head" style="border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent); padding-bottom: 1rem;">
     <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Outros / Ferramentas</p>
@@ -108,6 +161,7 @@
     {/each}
   </div>
 </div>
+{/if}
 
 <style>
   .hub-shell {
@@ -234,6 +288,140 @@
   @media (min-width: 1024px) {
     .tools-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .zelo-tools-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+  }
+
+  .zelo-tools-head {
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .zelo-tools-head h1 {
+    margin-top: 0.35rem;
+  }
+
+  .zelo-tools-subtitle {
+    max-width: 60ch;
+    margin-top: 0.5rem;
+    color: var(--text-muted);
+  }
+
+  .zelo-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.875rem;
+  }
+
+  .zelo-tool-card {
+    display: flex;
+    min-height: 12.5rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    color: var(--text-main);
+    text-decoration: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-card);
+    transition:
+      transform var(--zelo-dur-fast) var(--zelo-ease-spring),
+      border-color var(--zelo-dur-fast) var(--zelo-ease-out);
+  }
+
+  a.zelo-tool-card:hover {
+    border-color: var(--border-strong);
+  }
+
+  a.zelo-tool-card:active {
+    transform: scale(0.97);
+  }
+
+  a.zelo-tool-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  .zelo-tool-card-disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .zelo-tool-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .zelo-tool-icon {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    background: var(--bg-sunken);
+    border-radius: var(--radius-control);
+  }
+
+  .zelo-tool-tag {
+    padding: 0.25rem 0.625rem;
+    color: var(--text-muted);
+    background: var(--bg-sunken);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+  }
+
+  .zelo-tool-tag-free {
+    color: var(--status-success-text);
+    background: var(--status-success-bg);
+    border-color: var(--status-success-border);
+  }
+
+  .zelo-tool-description {
+    flex: 1;
+    color: var(--text-muted);
+  }
+
+  .zelo-tool-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
+    color: var(--text-main);
+  }
+
+  @media (max-width: 767px) {
+    .zelo-tools-head {
+      margin-bottom: 1rem;
+    }
+
+    .zelo-tools-grid {
+      grid-template-columns: 1fr;
+      gap: 0.625rem;
+    }
+
+    .zelo-tool-card {
+      min-height: 10.75rem;
+      padding: 1rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zelo-tool-card {
+      transition-duration: 0ms;
+    }
+
+    a.zelo-tool-card:active {
+      transform: none;
     }
   }
 </style>
