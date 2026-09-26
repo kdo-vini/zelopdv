@@ -93,6 +93,7 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     "Descrição" deslocado em Despesas, ícones esmagados em Pessoas.
     Harness: `LISTS=1` e `EVAL`.
   - **Fase 4 — Relatórios** (mockup 04 aprovado): abas "Por caixa / Por período" com indicador líquido e troca com blur, atalhos em segmentado, receita líquida navy contando, cartões/tabelas/valores em Mono, barra de pagamentos e barras que crescem com mola, rosca que entra girando. CSS escopado + ramos `$zeloSurface` mínimos; todas as seções, filtros e exportações iguais. Paleta de gráficos do Design System no tema App (`derived.css` + `--zelo-chart-*`); `chartColors.js` escolhe a paleta pela superfície viva (PDF/Excel do tema novo seguem a tela; legado inalterado), com teste. `Segmented` ganhou `onselect`. Legado idêntico à main.
+  - **Mockup 05 — Perfil, Assinatura e Ferramentas** gerado (`docs/design-system/mockups/05-conta.html`), aguardando aprovação do dono. Só apresentação; nenhuma regra de cobrança muda.
   - Dono aprovou o visual interno (2026-09-26). **Por último:** refazer as
     capturas da landing (hero, "Vendeu bem…", cards, `PhoneShot`) com a UI nova.
 
