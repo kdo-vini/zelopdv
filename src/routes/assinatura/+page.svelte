@@ -1736,10 +1736,10 @@
             <button
               type="button"
               class="btn-primary"
-              class:pix-copied={pixCopied}
+              class:pix-copied={$zeloSurface && pixCopied}
               on:click={copyPixCode}
             >
-              {#if pixCopied}<CircleCheckBig class="size-5" aria-hidden="true" /> Copiado{:else}Copiar código Pix{/if}
+              {#if $zeloSurface && pixCopied}<CircleCheckBig class="size-5" aria-hidden="true" /> Copiado{:else}Copiar código Pix{/if}
             </button>
             <button
               type="button"
@@ -3087,6 +3087,11 @@
     :global([data-surface="app"]) .pix-copy-field textarea {
       min-height: 48px;
       font-size: 16px;
+    }
+
+    /* app.css already ends the layer at the bottom nav; a sheet sits flush on it. */
+    :global([data-surface="app"]) .pix-modal-layer {
+      padding: 0;
     }
 
     :global([data-surface="app"]) .pix-modal {
