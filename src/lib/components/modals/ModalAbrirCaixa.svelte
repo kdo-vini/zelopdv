@@ -6,14 +6,17 @@
   import { createEventDispatcher, onDestroy } from 'svelte';
   import { zeloSurface } from '$lib/theme/surface';
   import Sheet from '$lib/components/zelo/Sheet.svelte';
-  import { Button } from '$lib/components/ui/button';
-  
+  import MorphButton from '$lib/components/zelo/MorphButton.svelte';
+
   const dispatch = createEventDispatcher();
-  
+
   /** @type {boolean} */
   export let open = false;
   /** Controlado pelo pai: true enquanto a abertura está em andamento. Volta a false em caso de falha, reabilitando o botão. */
   export let busy = false;
+  /** Presentational only (zelo): true when this open-till step leads straight into payment
+      (first-use "Receber" flow) — shows the "Antes de receber" eyebrow above the title. */
+  export let beforePayment = false;
 
   let trocoInicial = 0;
 
@@ -56,6 +59,7 @@
   <Sheet
     labelledby="abrir-caixa-title"
     title="Abrir caixa"
+    eyebrow={beforePayment ? 'Antes de receber' : ''}
     size="sm"
     backdropProps={{ 'data-update-safe': 'true' }}
     panelProps={{ tabindex: '-1' }}
@@ -85,9 +89,7 @@
         </div>
       </div>
       <div class="zsheet-footer">
-        <Button variant="primary" size="touch" type="submit" class="z-primary" disabled={busy}>
-          {busy ? 'Abrindo...' : 'Abrir caixa'}
-        </Button>
+        <MorphButton state={busy ? 'loading' : 'idle'} size="cta" type="submit" class="z-primary" loadingLabel="Abrindo…" label="Abrir caixa" />
       </div>
     </form>
   </Sheet>

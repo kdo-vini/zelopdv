@@ -9,7 +9,8 @@
  * Env: ROUTE (default /app), QS (default ?tema=novo; "" for legacy), ADD (tabs/radios/buttons to click by accessible name,
  * in order), KEYS (keys to press after), OPEN_CART, VP (WxH), OUT (png path without extension), CHROMIUM_PATH,
  * STEPS (after the rest: comma list of `key:<Key>`, `click:<accessible name>`, `type:<text>` (keyboard.type on
- * whatever is focused), `wait:<ms>`), MOTION=1 (real motion), NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
+ * whatever is focused), `fill:<label>|<value>` (labelled text input, via <label for>), `wait:<ms>`),
+ * MOTION=1 (real motion), NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
  * WIZARD=1: empresa_perfil comes back with empty nome_exibicao/contato (so /perfil?msg=complete opens the
  * OnboardingWizard), POST /api/billing/start-trial is intercepted with 200 {}, and getUser() carries no
  * heard_from metadata. No effect when the flag is absent. If ROUTE already has a `?` (e.g. /perfil?msg=complete),
@@ -20,6 +21,9 @@
  * HOLD_NAV=1 suppresses analytics callbacks that navigate away from timed success screens.
  * LOAD_STATE (default networkidle; use domcontentloaded for pages with persistent connections).
  * WAIT_AFTER (milliseconds after navigation; default 2500).
+ * Any POST insert (e.g. ModalNovoProduto's quick product, abrirCaixaIdempotente's caixa open) is
+ * answered with the submitted row plus a generated id, and kept in the table so a later refetch
+ * in the same run (e.g. after creating the first product) sees it. Always on, no flag.
  * docs/DESIGN_SYSTEM.md → Verificação.
  */
 import { chromium } from '@playwright/test';
@@ -100,6 +104,7 @@ const tables = {
   access_users: [], categorias: process.env.EMPTY ? [] : cats, subcategorias: [], produtos: process.env.EMPTY ? [] : prods,
   caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date(new Date().setHours(8, 0, 0, 0)).toISOString(), data_fechamento: null, valor_inicial: 200 }],
 };
+let insertSeq = 9000; // ids handed out to POST inserts answered by the mock (see below), clear of the fixtures' own ids
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, locale: 'pt-BR', reducedMotion: process.env.MOTION ? 'no-preference' : 'reduce' });
 await ctx.addInitScript(([s]) => { try { localStorage.setItem('sb-mockproj-auth-token', s); localStorage.setItem('zelo_onboarding_done', '1'); } catch {} }, [JSON.stringify(session)]);
@@ -114,8 +119,8 @@ if (process.env.HOLD_NAV) {
 }
 await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   const req = route.request(); const url = new URL(req.url());
-  const json = (body, headers = {}) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', ...headers }, body: JSON.stringify(body) });
-  if (req.method() === 'OPTIONS') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
+  const json = (body, headers = {}) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', 'access-control-expose-headers': '*', ...headers }, body: JSON.stringify(body) });
+  if (req.method() === 'OPTIONS') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' } });
   if (url.pathname.startsWith('/auth/v1/user')) return json(user);
   if (url.pathname.startsWith('/auth/v1/token')) return json(session);
   if (url.pathname === '/rest/v1/rpc/criar_venda_completa') return json({ id: 'v1', numero_venda: 1042 });
@@ -126,6 +131,20 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
     if (process.env.SLOW && m[1] === (process.env.SLOW_TABLE || 'empresa_perfil') && !['GET', 'HEAD'].includes(req.method())) {
       await new Promise((r) => setTimeout(r, Number(process.env.SLOW)));
     }
+    // Answer inserts (e.g. ModalNovoProduto's quick product, abrirCaixaIdempotente's caixa open)
+    // by echoing the submitted row with a generated id, and keep it in the in-memory table so a
+    // later refetch (carregarProdutos(true), buscarCaixaAberto...) sees it — same table object,
+    // no server restart needed. No effect on GET/HEAD/PATCH/DELETE.
+    if (req.method() === 'POST') {
+      let body = null;
+      try { body = req.postDataJSON(); } catch { body = null; }
+      if (body) {
+        const insertedRows = (Array.isArray(body) ? body : [body]).map((r) => ({ id: r.id ?? insertSeq++, ...r }));
+        tables[m[1]] = [...(tables[m[1]] ?? []), ...insertedRows];
+        const wantsSingle = (req.headers()['accept'] || '').includes('vnd.pgrst.object');
+        return wantsSingle ? json(insertedRows[0]) : json(insertedRows);
+      }
+    }
     // PostgREST `col=eq.value` filters (enough for single-row lookups like /app/mesas/[id])
     let rows = tables[m[1]] ?? [];
     for (const [k, v] of url.searchParams) {
@@ -133,7 +152,7 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
     }
     const single = (req.headers()['accept'] || '').includes('vnd.pgrst.object');
     const headers = { 'content-range': `0-${Math.max(0, rows.length - 1)}/${rows.length}` };
-    if (req.method() === 'HEAD') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', ...headers } });
+    if (req.method() === 'HEAD') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-expose-headers': '*', ...headers } });
     if (single) return rows.length ? json(rows[0], headers) : route.fulfill({ status: 406, contentType: 'application/json', body: JSON.stringify({ code: 'PGRST116', message: 'no rows' }) });
     return json(rows, headers);
   }
@@ -186,6 +205,15 @@ for (const step of (process.env.STEPS || '').split(',').filter(Boolean)) {
   if (kind === 'key') await page.keyboard.press(arg);
   else if (kind === 'wait') await page.waitForTimeout(Number(arg));
   else if (kind === 'type') await page.keyboard.type(arg);
+  else if (kind === 'fill') {
+    // fill:<accessible label>|<value> — for form fields the harness's role-based `click` can't
+    // reach (labelled text inputs). Resolves via <label for>, same as Playwright's getByLabel.
+    const sep = arg.indexOf('|');
+    const [label, value] = sep === -1 ? [arg, ''] : [arg.slice(0, sep), arg.slice(sep + 1)];
+    const loc = page.getByLabel(label, { exact: true }).first();
+    if (await loc.count()) await loc.fill(value, { timeout: 5000 }).catch((e) => console.log('fill fail', label, e.message));
+    else console.log('not found (label)', label);
+  }
   else if (kind === 'click') {
     let target = null;
     for (const role of ['tab', 'radio', 'button', 'menuitem']) {

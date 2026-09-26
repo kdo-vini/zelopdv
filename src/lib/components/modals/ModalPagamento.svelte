@@ -46,7 +46,12 @@
 
   /** @type {number} */
   export let subtotalProdutos = 0;
-  
+
+  /** Presentation only (zelo): true when this sheet just took over from the "Abrir caixa" sheet
+      in the same first-use flow (see /app's seguirParaPagamentoSePendente). Plays a short
+      content blur-in instead of the sheet's normal entrance, so it reads as one continuous sheet. */
+  export let continuing = false;
+
   // Estados locais
   let formaPagamento = null;
   let valorRecebido = 0;
@@ -425,7 +430,7 @@
     on:keydown={handleKeydown}
     on:click|self={handleClose}
   >
-    <div class="zp-sheet">
+    <div class="zp-sheet" class:zp-continuing={continuing}>
       <header class="zp-head">
         <div>
           <p class="zp-eyebrow">Receber</p>
@@ -1417,6 +1422,15 @@
     border-radius: var(--zelo-radius-sheet);
     background: var(--bg-panel);
     box-shadow: var(--shadow-modal);
+  }
+  /* Continuidade Abrir caixa → Pagamento (item 4 do brief de onboarding): a folha não tem uma
+     animação de entrada própria hoje, então "pular a entrada" já é automático; só o conteúdo
+     entra com o mesmo blur/escala do blurSwap (src/lib/motion/transitions.js), 70 ms depois. */
+  .zp-continuing {
+    animation: zp-continue-in var(--zelo-dur-slow) var(--zelo-ease-spring) 70ms backwards;
+  }
+  @keyframes zp-continue-in {
+    from { opacity: 0; filter: blur(8px); transform: scale(0.96); }
   }
   .zp-head {
     flex: none;

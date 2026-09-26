@@ -270,6 +270,11 @@
   // true enquanto aguardamos a abertura do caixa (disparada pela barreira de
   // pagamento) para então seguir automaticamente para o ModalPagamento.
   let pendingPaymentAfterCaixa = false;
+  // Presentation only (zelo): true when the payment sheet is opening right after the caixa
+  // sheet in the same first-use flow, so ModalPagamento can play a content-only blur-in
+  // instead of its normal entrance. Reset in abrirModalPagamento() so it never leaks into
+  // a payment opened any other way. Ver seguirParaPagamentoSePendente().
+  let pagamentoContinuaDoCaixa = false;
   $: isFirstUseNoCaixa = computeIsFirstUseNoCaixa({ hasEverOpenedCaixa, isSubUser, caixaAberto });
   
   // Referência ao componente ModalPagamento
@@ -1121,6 +1126,7 @@
   function seguirParaPagamentoSePendente() {
     if (!pendingPaymentAfterCaixa) return;
     pendingPaymentAfterCaixa = false;
+    pagamentoContinuaDoCaixa = true;
     modalPagamentoAberto = true;
   }
 
@@ -1490,6 +1496,10 @@
   }
 
   async function abrirModalPagamento() {
+    // Reseta a continuidade visual do sheet Abrir caixa → Pagamento: só fica true quando
+    // seguirParaPagamentoSePendente() acabou de defini-la, um instante antes de reabrir
+    // este mesmo modal de pagamento por fora deste fluxo (Receber normal, retomada etc.).
+    pagamentoContinuaDoCaixa = false;
     // Retomada de confirmação pendente: reload/outra sessão trouxe do rascunho
     // uma comanda travada com checkoutSubmission.formState (venda já enviada
     // para a RPC com confirmação incerta). Precisa reaproveitar exatamente o
@@ -2238,6 +2248,7 @@
 <ModalAbrirCaixa
   open={modalAbrirCaixaAberto}
   busy={abrindoCaixa}
+  beforePayment={pendingPaymentAfterCaixa}
   on:submit={async (e) => {
     if (!canAbrirCaixa) { addToast('Sem permissão para abrir caixa.', 'error'); return; }
     trocoInicialInput = e.detail.trocoInicial;
@@ -2343,6 +2354,7 @@
   taxaEntrega={tipoPedido === 'delivery' ? Number(taxaEntregaInput || 0) : 0}
   {comanda}
   {plataformasAtivas}
+  continuing={pagamentoContinuaDoCaixa}
   on:confirmar={handleVendaConfirmada}
   on:close={() => {
     modalPagamentoAberto = false;

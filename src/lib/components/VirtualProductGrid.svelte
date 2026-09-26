@@ -211,6 +211,7 @@
   on:scroll={handleScroll}
 >
   {#if produtos.length === 0}
+    {#if !zelo}
     <div class="empty-state">
       <div class="empty-content">
         <div class="empty-icon" aria-hidden="true">
@@ -243,6 +244,42 @@
         {/if}
       </div>
     </div>
+    {:else}
+    <!-- Zelo Design System (docs/design-system/mockups/06-onboarding.html, quadros 9/21). Same
+         conditions/handlers as the legacy branch above; only the markup/CSS changes. -->
+    <div class="zelo-empty">
+      <div class="zelo-empty-content">
+        <div class="zelo-empty-icon" aria-hidden="true">
+          <Receipt size={24} strokeWidth={1.75} />
+        </div>
+        <h3 class="zelo-empty-title type-heading">{hasAnyProducts ? 'Nenhum produto encontrado' : 'Faça sua primeira venda'}</h3>
+        <p class="zelo-empty-text type-body">
+          {hasAnyProducts
+            ? 'Tente limpar a busca ou escolher outra categoria. Se quiser vender mesmo assim, use um item avulso.'
+            : 'Cadastre seu primeiro produto para começar. É rápido: nome e preço.'}
+        </p>
+        <div class="zelo-empty-actions">
+          {#if !hasAnyProducts && canCadastrarProduto}
+            <button type="button" class="zelo-empty-primary" on:click={handleCadastrarProdutoClick}>
+              <Plus size={18} strokeWidth={1.75} aria-hidden="true" />
+              <span>Cadastrar primeiro produto</span>
+            </button>
+          {/if}
+          <button type="button" class="{!hasAnyProducts && canCadastrarProduto ? 'zelo-empty-secondary' : 'zelo-empty-primary'}" on:click={handleValorAvulsoClick}>
+            <span>{hasAnyProducts ? 'Testar com item avulso' : 'Ou venda avulsa'}</span>
+          </button>
+        </div>
+        {#if !hasAnyProducts}
+          <div class="zelo-empty-preview" aria-hidden="true">
+            <div class="zelo-empty-preview-tile"></div>
+            <div class="zelo-empty-preview-tile"></div>
+            <div class="zelo-empty-preview-tile zelo-empty-preview-tile-third"></div>
+          </div>
+          <p class="zelo-empty-footnote type-caption">Seus produtos aparecerão aqui.</p>
+        {/if}
+      </div>
+    </div>
+    {/if}
   {:else}
   <!-- Container com altura total para scroll correto. extraBottom reserva a barra inferior e, no primeiro uso, a dica abaixo do tile. -->
   <div style="height: {totalHeight + extraBottom}px; position: relative;">
@@ -255,13 +292,18 @@
       on:keydown={handleKeydown}
     >
       {#each visibleProducts as produto (produto.id)}
-        {@const isCoachmark = isCoachmarkProduct(produto)}
         <div class="prod-cell">
           {#if zelo}
+            <!-- zelo tile + tip live in their own nested block (this {#if zelo} branch) so this
+                 boolean, referenced directly here, is tracked as this block's own dependency —
+                 unlike a plain isCoachmarkProduct(produto) call, which Svelte can't see closes
+                 over coachmarkProductId. Kept out of the legacy branch below on purpose: that
+                 branch must keep calling the shared helper exactly as before, unmodified. -->
+            {@const isCoachmark = coachmarkProductId != null && produto?.id != null && String(produto.id) === String(coachmarkProductId)}
             <ProductTile
               data-prod={produto.id}
               aria-describedby={isCoachmark ? 'prod-coachmark-tip' : undefined}
-              class={isCoachmark ? 'zelo-tile prod-tile-highlight' : 'zelo-tile'}
+              class={isCoachmark ? 'zelo-tile zelo-tile-hl' : 'zelo-tile'}
               name={produto.nome}
               meta={produto.tipo_produto === 'pizza' ? 'a partir de' : (produto.por_unidade ? 'por unidade' : '')}
               price={tilePrice(produto)}
@@ -269,7 +311,27 @@
               lowStock={lowStockOf(produto)}
               onclick={() => handleProdutoClick(produto)}
             />
+            {#if isCoachmark}
+              <!-- Zelo: bloco navy colado no tile, com o filete dos 8 s do timer real (o timeout
+                   continua em app/+page.svelte; isto é só o desenho da barra). -->
+              <div class="zc-tip">
+                <span class="zc-arrow" aria-hidden="true">
+                  <ChevronUp size={20} />
+                </span>
+                <p id="prod-coachmark-tip" class="zc-text type-body-strong" role="status">Toque no produto para somar na venda</p>
+                <button
+                  type="button"
+                  class="zc-dismiss"
+                  aria-label="Dispensar dica"
+                  on:click={handleCoachmarkDismiss}
+                >
+                  Entendi
+                </button>
+                <i class="zc-bar" aria-hidden="true"></i>
+              </div>
+            {/if}
           {:else}
+          {@const isCoachmark = isCoachmarkProduct(produto)}
           <button
             data-prod={produto.id}
             type="button"
@@ -283,7 +345,7 @@
                 {produto.nome}
               </span>
             </div>
-            
+
             <div class="px-3 pb-3 w-full text-right">
               <div class="flex items-baseline justify-end gap-0.5">
                 <span class="text-[10px] font-bold text-sky-400">{produto.tipo_produto === 'pizza' ? 'A partir de R$' : 'R$'}</span>
@@ -293,7 +355,6 @@
               </div>
             </div>
           </button>
-          {/if}
           {#if isCoachmark}
             <div class="prod-coachmark">
               <span class="prod-coachmark-arrow" aria-hidden="true">
@@ -309,6 +370,7 @@
                 Entendi
               </button>
             </div>
+          {/if}
           {/if}
         </div>
       {/each}
@@ -596,5 +658,227 @@
   .prod-coachmark-dismiss:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+
+  /* ── Zelo empty state (docs/design-system/mockups/06-onboarding.html, quadros 9/21) ── */
+  .zelo-empty {
+    min-height: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 8px 0;
+  }
+
+  .zelo-empty-content {
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
+  }
+
+  .zelo-empty-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 16px;
+    border-radius: var(--zelo-radius-card);
+    display: grid;
+    place-items: center;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-main);
+  }
+
+  .zelo-empty-title {
+    margin: 0 0 8px;
+    color: var(--text-main);
+    text-wrap: balance;
+  }
+
+  .zelo-empty-text {
+    margin: 0 auto 24px;
+    max-width: 300px;
+    color: var(--text-label);
+  }
+
+  .zelo-empty-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .zelo-empty-primary,
+  .zelo-empty-secondary {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    cursor: pointer;
+    transition: background var(--zelo-dur-fast) var(--zelo-ease-out), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+
+  .zelo-empty-primary {
+    height: 52px;
+    border-radius: var(--zelo-radius-cta);
+    background: var(--primary);
+    color: var(--primary-text);
+    font: var(--type-body-strong);
+    letter-spacing: var(--type-body-strong-tracking);
+    font-weight: 600;
+    box-shadow: var(--elevation-float);
+  }
+
+  .zelo-empty-primary:hover { background: var(--primary-hover); }
+
+  .zelo-empty-secondary {
+    height: 48px;
+    border-radius: var(--zelo-radius-control);
+    background: transparent;
+    color: var(--text-label);
+    font: var(--type-label);
+    letter-spacing: var(--type-label-tracking);
+  }
+
+  .zelo-empty-secondary:hover {
+    color: var(--text-main);
+    background: var(--bg-sunken);
+  }
+
+  .zelo-empty-primary:active,
+  .zelo-empty-secondary:active {
+    transform: scale(var(--zelo-press-scale));
+    transition-duration: var(--zelo-dur-fast);
+  }
+
+  .zelo-empty-primary:focus-visible,
+  .zelo-empty-secondary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  .zelo-empty-preview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    margin: 32px 0 12px;
+  }
+
+  .zelo-empty-preview-tile {
+    height: 64px;
+    border-radius: var(--zelo-radius-card);
+    border: 1.5px dashed var(--border-strong);
+  }
+
+  .zelo-empty-preview-tile-third { opacity: 0.5; }
+
+  .zelo-empty-footnote {
+    margin: 0;
+    color: var(--text-muted);
+  }
+
+  @media (min-width: 640px) {
+    .zelo-empty { padding-top: 70px; }
+  }
+
+  /* ── Zelo coachmark: tile ring + tip (quadros 11/23) ── */
+  .prod-cell :global(.zelo-tile-hl) {
+    border-color: var(--primary);
+    /* ring drawn inside the border: the grid scroller clips anything above the first row */
+    box-shadow: inset 0 0 0 1px var(--primary), var(--elevation-float);
+  }
+
+  .zc-tip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 5;
+    width: min(330px, calc(200% + 12px));
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px 14px 14px;
+    border-radius: var(--zelo-radius-card);
+    background: var(--primary);
+    color: var(--primary-text);
+    box-shadow: var(--elevation-float);
+    animation: zc-pop var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+
+  .zc-tip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 24px;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--primary);
+    transform: rotate(45deg);
+  }
+
+  /* Kept in the DOM (not removed) per docs/DESIGN_SYSTEM.md; the notch above replaces it visually. */
+  .zc-arrow { display: none; }
+
+  .zc-text {
+    flex: 1;
+    margin: 0;
+    color: var(--primary-text);
+    text-wrap: balance;
+  }
+
+  .zc-dismiss {
+    flex: none;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--zelo-radius-control);
+    background: color-mix(in srgb, var(--primary-text) 16%, transparent);
+    color: var(--primary-text);
+    font: var(--type-label);
+    letter-spacing: var(--type-label-tracking);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .zc-dismiss:hover { background: color-mix(in srgb, var(--primary-text) 24%, transparent); }
+
+  .zc-dismiss:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-text) 40%, transparent);
+  }
+
+  .zc-bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background: color-mix(in srgb, var(--primary-text) 55%, transparent);
+    transform-origin: left;
+    /* Mirrors the real 8 s coachmark timeout owned by app/+page.svelte
+       (fecharHelperPrimeiroClick / timeoutHelperPrimeiroClick) — this is only the
+       visual filete, so it stays a plain 8s and is not tied to --zelo-dur-*. */
+    animation: zc-bar 8s linear forwards;
+  }
+
+  @keyframes zc-pop {
+    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  }
+
+  @keyframes zc-bar {
+    to { transform: scaleX(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zelo-empty-primary:active,
+    .zelo-empty-secondary:active {
+      transform: none;
+    }
+
+    .zc-tip,
+    .zc-bar {
+      animation: none;
+    }
   }
 </style>

@@ -884,8 +884,19 @@
   .znp-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .znp-grid > * { min-width: 0; }
   @media (min-width: 640px) { .znp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  button.link-btn.znp-link { align-self: flex-start; margin-top: 0; color: var(--text-main); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
-  button.link-btn.znp-link:hover { color: var(--primary-hover); }
+  /* Link mais quieto (mockup 06-onboarding, quadro 10 "+ Nova categoria"): usa o papel
+     type-label e --text-label em vez do peso/tamanho literal herdados de .link-btn. */
+  button.link-btn.znp-link {
+    align-self: flex-start;
+    margin-top: 0;
+    color: var(--text-label);
+    font: var(--type-label);
+    letter-spacing: var(--type-label-tracking);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  button.link-btn.znp-link:hover { color: var(--text-main); }
   button.link-btn.znp-link:focus-visible { outline: none; border-radius: 6px; box-shadow: 0 0 0 4px var(--focus); }
   .znp-options { display: flex; flex-direction: column; padding: 4px 16px; border-radius: var(--zelo-radius-card); background: var(--bg-sunken); }
   .znp-options > :global(.z-check + .z-check) { border-top: 1px solid var(--border-subtle); }
