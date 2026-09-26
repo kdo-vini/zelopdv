@@ -17,6 +17,7 @@
  * SLOW=<ms>: delays writes to a table (default empresa_perfil, override with SLOW_TABLE) so a loading state is
  * screenshottable. No effect when absent.
  * BILLING=1 mocks the local Pix create/status endpoints for subscription screenshots.
+ * HOLD_NAV=1 suppresses analytics callbacks that navigate away from timed success screens.
  * LOAD_STATE (default networkidle; use domcontentloaded for pages with persistent connections).
  * WAIT_AFTER (milliseconds after navigation; default 2500).
  * docs/DESIGN_SYSTEM.md → Verificação.
@@ -102,6 +103,15 @@ const tables = {
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, locale: 'pt-BR', reducedMotion: process.env.MOTION ? 'no-preference' : 'reduce' });
 await ctx.addInitScript(([s]) => { try { localStorage.setItem('sb-mockproj-auth-token', s); localStorage.setItem('zelo_onboarding_done', '1'); } catch {} }, [JSON.stringify(session)]);
+if (process.env.HOLD_NAV) {
+  await ctx.addInitScript(() => {
+    Object.defineProperty(window, 'gtag', {
+      configurable: true,
+      get: () => () => {},
+      set: () => {},
+    });
+  });
+}
 await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   const req = route.request(); const url = new URL(req.url());
   const json = (body, headers = {}) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', ...headers }, body: JSON.stringify(body) });

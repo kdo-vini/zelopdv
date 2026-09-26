@@ -8,6 +8,7 @@
   import { page } from '$app/stores';
   import { trackGoogleAdsAssinatura, waitForGtag } from '$lib/googleAds';
   import BackLink from '$lib/components/ui/BackLink.svelte';
+  import { zeloSurface } from '$lib/theme/surface.js';
 
   const REDIRECT_DELAY_MS = 4500;
   const GOOGLE_CALLBACK_TIMEOUT_MS = 3000;
@@ -85,7 +86,7 @@
   });
 </script>
 
-<section class="success-shell">
+<section class="success-shell" class:zelo-success={$zeloSurface}>
   <div class="success-card">
     <BackLink href="/assinatura" label="Assinatura" />
 
@@ -325,6 +326,221 @@
 
     .primary-action {
       width: 100%;
+    }
+  }
+
+  .zelo-success.success-shell {
+    padding: clamp(1rem, 4vw, 3rem);
+    background: var(--bg-app);
+  }
+
+  .zelo-success .success-card {
+    width: min(100%, 720px);
+    padding: clamp(1.25rem, 4vw, 3rem);
+    gap: 1.5rem;
+    border-color: var(--border-card);
+    border-radius: var(--zelo-radius-card);
+    background: var(--bg-card);
+    box-shadow: var(--elevation-float);
+    animation: zelo-card-enter var(--zelo-dur-slow) var(--zelo-ease-spring) both;
+  }
+
+  .zelo-success .success-badge {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--success);
+    font: var(--type-eyebrow);
+    letter-spacing: var(--type-eyebrow-tracking);
+  }
+
+  .zelo-success .badge-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--success);
+    box-shadow: 0 0 0 5px var(--status-success-bg);
+    animation: zelo-dot-pulse 1.8s var(--zelo-ease-out) infinite;
+  }
+
+  .zelo-success .icon-wrap {
+    width: 6rem;
+    height: 6rem;
+    border-color: var(--status-success-border);
+    background: var(--status-success-bg);
+  }
+
+  .zelo-success .success-icon {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .zelo-success .icon-ring {
+    stroke: var(--status-success-border);
+    stroke-dasharray: 190;
+    animation: zelo-ring-draw 700ms var(--zelo-ease-out) both;
+  }
+
+  .zelo-success .icon-check {
+    stroke: var(--success);
+    stroke-dasharray: 36;
+    stroke-dashoffset: 36;
+    animation: zelo-check-draw 420ms var(--zelo-ease-out) 420ms forwards;
+  }
+
+  .zelo-success h1 {
+    max-width: 12ch;
+    font: var(--type-display);
+    letter-spacing: var(--type-display-tracking);
+    color: var(--text-main);
+  }
+
+  .zelo-success .lead {
+    font: var(--type-body);
+    letter-spacing: var(--type-body-tracking);
+    color: var(--text-muted);
+  }
+
+  .zelo-success .status-row {
+    padding: 1rem;
+    border-radius: var(--zelo-radius-card);
+    border-color: var(--border-subtle);
+    background: var(--bg-sunken);
+  }
+
+  .zelo-success .status-copy strong {
+    font: var(--type-heading);
+    letter-spacing: var(--type-heading-tracking);
+  }
+
+  .zelo-success .status-copy span {
+    font: var(--type-caption);
+    letter-spacing: var(--type-caption-tracking);
+  }
+
+  .zelo-success .countdown-pill {
+    min-width: 3.5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--zelo-radius-control);
+    border-color: var(--border-card);
+    background: var(--bg-card);
+    color: var(--text-main);
+    font: var(--type-num-md);
+    letter-spacing: var(--type-num-md-tracking);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .zelo-success .progress-track {
+    height: 0.5rem;
+    background: var(--bg-sunken);
+  }
+
+  .zelo-success .progress-bar {
+    background: var(--primary);
+    animation: drain 4.5s linear forwards;
+  }
+
+  .zelo-success .primary-action {
+    min-height: 3rem;
+    border-radius: var(--zelo-radius-control);
+    background: var(--primary);
+    color: var(--primary-text);
+    font: var(--type-label);
+    letter-spacing: var(--type-label-tracking);
+    box-shadow: var(--elevation-control);
+    transition:
+      transform var(--zelo-dur-slow) var(--zelo-ease-spring),
+      background-color var(--zelo-dur-fast) var(--zelo-ease-out),
+      box-shadow var(--zelo-dur-fast) var(--zelo-ease-out);
+  }
+
+  .zelo-success .primary-action:hover {
+    filter: none;
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--elevation-float);
+  }
+
+  .zelo-success .primary-action:active {
+    transform: scale(var(--zelo-press-scale));
+  }
+
+  .zelo-success .primary-action:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  @keyframes zelo-card-enter {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes zelo-ring-draw {
+    from { stroke-dashoffset: 190; transform: rotate(-90deg); transform-origin: center; }
+    to { stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: center; }
+  }
+
+  @keyframes zelo-check-draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes zelo-dot-pulse {
+    50% { transform: scale(1.16); }
+  }
+
+  @media (max-width: 640px) {
+    .zelo-success.success-shell {
+      place-items: start stretch;
+      padding: 1rem;
+    }
+
+    .zelo-success .success-card {
+      padding: 1.25rem;
+      gap: 1rem;
+      align-content: start;
+      border-radius: var(--zelo-radius-card);
+      box-shadow: var(--elevation-card);
+    }
+
+    .zelo-success .icon-wrap {
+      width: 5rem;
+      height: 5rem;
+    }
+
+    .zelo-success .success-icon {
+      width: 3.25rem;
+      height: 3.25rem;
+    }
+
+    .zelo-success .status-row {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .zelo-success .status-copy {
+      min-width: 0;
+    }
+
+    .zelo-success .countdown-pill {
+      flex: none;
+    }
+
+    .zelo-success .primary-action {
+      width: 100%;
+      min-height: 3.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zelo-success .success-card,
+    .zelo-success .badge-dot,
+    .zelo-success .icon-ring,
+    .zelo-success .icon-check {
+      animation: none;
+    }
+
+    .zelo-success .icon-check {
+      stroke-dashoffset: 0;
     }
   }
 </style>
