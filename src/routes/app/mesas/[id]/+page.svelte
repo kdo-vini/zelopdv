@@ -26,6 +26,10 @@
   import { buscarProdutosLocal, buscarCategoriasLocal } from '$lib/offlineDb';
   import { MESA_SNAPSHOT, findMergeableComandaItem } from '$lib/finance/offlineMesas';
   import { newMesaPayments, projectStockProducts } from '$lib/finance/offlineProjection';
+  import { zeloSurface } from '$lib/theme/surface';
+  import { MoneyText, ProductTile, SearchField, UnderlineTabs } from '$lib/components/zelo';
+  import { Button } from '$lib/components/ui/button';
+  import { ArrowLeftRight, ChefHat, ChevronLeft, ChevronUp, Minus, NotebookPen, Plus, Receipt, ShoppingCart, SlidersHorizontal, Split, Users, X } from 'lucide-svelte';
 
   let userId = '';
   let ownerUserId = '';
@@ -134,6 +138,10 @@
   // Pagamentos parciais — total já pago e saldo a pagar
   $: jaPago = pagamentosParciais.reduce((acc, p) => acc + Number(p.valor || 0), 0);
   $: saldoMesa = Math.max(0, total - jaPago);
+  // Zelo surface (presentation only): category tabs and "already in the comanda" counts for the tiles
+  $: zCatTabs = [{ value: null, label: 'Todos' }, ...categorias.map((c) => ({ value: c.id, label: c.nome }))];
+  $: zQtdPorProduto = itens.reduce((acc, i) => { if (i.id_produto != null) acc[i.id_produto] = (acc[i.id_produto] || 0) + Number(i.quantidade || 0); return acc; }, {});
+  const zMoney = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   $: alvoPagamentoAtual = pagamentosParciais.length > 0 ? saldoMesa : total;
   $: quantidadePagaPorItem = pagamentosParciais.reduce((acc, pagamento) => {
     for (const alocacao of pagamento.itens_alocados || []) {
@@ -1345,6 +1353,186 @@
   <div class="centered-state">
     <p style="color: var(--text-muted);">Carregando comanda…</p>
   </div>
+{:else if $zeloSurface}
+  <!-- Zelo Design System (mockup 01 aprovado). Same state, handlers and guards as the legacy branch below. -->
+  <div class="zc">
+    <section class="zc-prod">
+      <header class="zc-head">
+        <div>
+          <p class="zc-eyebrow"><a href="/app/mesas" class="zc-back"><ChevronLeft size={13} strokeWidth={1.75} aria-hidden="true" />Mesas</a> / Mesa {mesa.numero}</p>
+          <div class="zc-title-row">
+            <h1 class="zc-title">Mesa {String(mesa.numero).padStart(2, '0')}</h1>
+            <span class="zc-pill" data-status={mesa.status}><i aria-hidden="true"></i>{statusLabel(mesa.status)}</span>
+          </div>
+        </div>
+        <div class="zc-head-acts">
+          <Button variant="outlined" size="md" onclick={abrirTransferModal} disabled={!comanda}><ArrowLeftRight strokeWidth={1.75} />Trocar de mesa</Button>
+          <Button variant="quiet" size="md" class="zc-danger" onclick={cancelarComanda}>Cancelar comanda</Button>
+        </div>
+      </header>
+
+      <SearchField bind:value={busca} placeholder="Buscar produto" class="zc-search" />
+      {#if categorias.length > 0}
+        <UnderlineTabs tabs={zCatTabs} bind:value={categoriaFiltro} label="Categorias" class="zc-cats" />
+      {/if}
+
+      <div class="zc-grid">
+        {#each produtosFiltrados as p (p.id)}
+          <ProductTile
+            name={p.nome}
+            price={p.tipo_produto === 'pizza' ? pizzaStartingPrice(p.pizza_config, p.modifierGroups) : p.preco}
+            meta={p.tipo_produto === 'pizza' ? 'A partir de' : (produtoSemEstoque(p) ? 'Sem estoque' : '')}
+            lowStock={produtoControlaEstoque(p) && !produtoSemEstoque(p) ? estoqueDisponivel(p) : null}
+            quantity={zQtdPorProduto[p.id] || 0}
+            class={produtoSemEstoque(p) ? 'zc-out' : ''}
+            onclick={() => adicionarProduto(p)}
+            disabled={savingItem || produtoSemEstoque(p)}
+            title={produtoSemEstoque(p) ? 'Sem estoque' : p.nome}
+          />
+        {/each}
+        {#if produtosFiltrados.length === 0}
+          <p class="zc-empty-prod">Nenhum produto encontrado.</p>
+        {/if}
+      </div>
+    </section>
+
+    {#if showMobileCart}<button type="button" class="zc-scrim" aria-label="Minimizar comanda" on:click={fecharMobileCart}></button>{/if}
+    <aside class="zc-cart" class:open={showMobileCart}>
+      <button type="button" class="zc-handle" on:click={fecharMobileCart} aria-label="Minimizar comanda"><span aria-hidden="true"></span></button>
+      <div class="zc-cart-head">
+        <div>
+          <p class="zc-eyebrow">Comanda · Mesa {String(mesa.numero).padStart(2, '0')}</p>
+          <h2 class="zc-heading">{itens.length} {itens.length === 1 ? 'item' : 'itens'}</h2>
+        </div>
+        <div class="zc-people" role="group" aria-label="Pessoas na mesa">
+          <Users size={16} strokeWidth={1.75} aria-hidden="true" />
+          <button type="button" on:click={() => ajustarPessoas(-1)} disabled={(comanda.num_pessoas || 1) <= 1} aria-label="Menos uma pessoa"><Minus size={14} strokeWidth={1.75} /></button>
+          <b>{comanda.num_pessoas || 1}</b>
+          <button type="button" on:click={() => ajustarPessoas(+1)} disabled={(comanda.num_pessoas || 1) >= 50} aria-label="Mais uma pessoa"><Plus size={14} strokeWidth={1.75} /></button>
+        </div>
+        <button type="button" class="zc-icon-btn zc-mobile-only" on:click={fecharMobileCart} aria-label="Minimizar comanda"><X size={18} strokeWidth={1.75} /></button>
+      </div>
+
+      <div class="zc-items">
+        {#if itens.length === 0}
+          <div class="zc-empty">
+            <ShoppingCart size={28} strokeWidth={1.5} aria-hidden="true" />
+            <p>Toque em um produto para lançar na mesa</p>
+          </div>
+        {:else}
+          <ul>
+            {#each itens as item (item.id)}
+              {@const qtdPaga = Number(quantidadePagaPorItem[item.id] || 0)}
+              {@const enviadoCozinha = Boolean(item.zelo_order_item_id) || itensEnviadosCozinha.has(item.id)}
+              <li class="zc-item" class:editing={observacaoItemId === item.id}>
+                <div class="zc-item-l">
+                  <p class="zc-item-nm">{item.nome_produto}</p>
+                  {#if item.modifierSummary}<p class="zc-item-sub">{item.modifierSummary}</p>{/if}
+                  <p class="zc-item-unit">R$ {zMoney(item.preco_unitario)} × {item.quantidade}</p>
+                  {#if observacaoItemId === item.id}
+                    <label class="zc-obs-edit">
+                      <span>Observação do produto</span>
+                      <textarea rows="2" maxlength="200" bind:value={observacaoRascunho} placeholder="Ex.: sem cebola"></textarea>
+                    </label>
+                    <div class="zc-obs-acts">
+                      <Button variant="quiet" size="md" onclick={() => (observacaoItemId = null)}>Cancelar</Button>
+                      <Button variant="primary" size="md" onclick={() => salvarObservacao(item)} disabled={savingItem}>Salvar</Button>
+                    </div>
+                  {:else}
+                    {#if item.observacao}<p class="zc-obs"><NotebookPen size={13} strokeWidth={1.75} aria-hidden="true" />{item.observacao}</p>{/if}
+                    {#if !enviadoCozinha}
+                      <button type="button" class="zc-obs-link" on:click={() => editarObservacao(item)} disabled={savingItem || isOfflineWriteActive()} title={isOfflineWriteActive() ? 'Sincronize a comanda para editar' : undefined}>{item.observacao ? 'Editar observação' : '+ Observação'}</button>
+                    {/if}
+                  {/if}
+                  {#if qtdPaga > 0}
+                    <span class="zc-paid">{qtdPaga >= Number(item.quantidade) - 0.001 ? 'Pago' : `Pago ${qtdPaga.toFixed(3).replace(/\.000$/, '')} de ${Number(item.quantidade).toFixed(3).replace(/\.000$/, '')}`}</span>
+                  {/if}
+                </div>
+                <div class="zc-item-r">
+                  <MoneyText value={Number(item.preco_unitario) * Number(item.quantidade)} size="sm" />
+                  {#if enviadoCozinha}
+                    <span class="zc-tag"><ChefHat size={13} strokeWidth={1.75} aria-hidden="true" />Na cozinha</span>
+                  {:else}
+                    <div class="zc-step" role="group" aria-label="Quantidade">
+                      <button type="button" on:click={() => alterarQuantidade(item, -1)} disabled={savingItem} aria-label="Diminuir"><Minus size={15} strokeWidth={1.75} /></button>
+                      <b>{item.quantidade}</b>
+                      <button type="button" on:click={() => alterarQuantidade(item, +1)} disabled={savingItem} aria-label="Aumentar"><Plus size={15} strokeWidth={1.75} /></button>
+                    </div>
+                    {#if canSendItemToKitchen()}
+                      <button type="button" class="zc-kitchen" on:click={() => enviarItemCozinha(item)} disabled={sendingCozinhaIds.has(item.id)} aria-label="Enviar item para a cozinha">
+                        <ChefHat size={14} strokeWidth={1.75} aria-hidden="true" />{sendingCozinhaIds.has(item.id) ? 'Enviando…' : 'Cozinha'}
+                      </button>
+                    {/if}
+                  {/if}
+                </div>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+
+      <div class="zc-foot">
+        <button type="button" class="zc-adj-toggle" class:open={ajustesOpen} on:click={() => (ajustesOpen = !ajustesOpen)} aria-expanded={ajustesOpen}>
+          <SlidersHorizontal size={15} strokeWidth={1.75} aria-hidden="true" />Taxa, couvert e desconto<ChevronUp size={15} strokeWidth={1.75} aria-hidden="true" class="zc-adj-chev" />
+        </button>
+        {#if ajustesOpen}
+          <div class="zc-adj">
+            <label><span>Taxa %</span><input type="number" inputmode="decimal" min="0" max="30" step="0.5" bind:value={comanda.taxa_servico_pct} on:change={() => atualizarComanda('taxa_servico_pct', Number(comanda.taxa_servico_pct) || 0)} /></label>
+            <label><span>Couvert R$</span><input type="number" inputmode="decimal" min="0" step="0.5" bind:value={comanda.couvert_valor} on:change={() => atualizarComanda('couvert_valor', Number(comanda.couvert_valor) || 0)} /></label>
+            <label><span>Desconto R$</span><input type="number" inputmode="decimal" min="0" step="0.5" bind:value={comanda.desconto} on:change={() => atualizarComanda('desconto', Number(comanda.desconto) || 0)} /></label>
+          </div>
+        {/if}
+
+        <div class="zc-ln"><span>Subtotal</span><MoneyText value={subtotal} size="sm" /></div>
+        {#if couvert > 0}<div class="zc-ln"><span>Couvert</span><span class="zc-num">+ <MoneyText value={couvert} size="sm" /></span></div>{/if}
+        {#if desconto > 0}<div class="zc-ln ok"><span>Desconto</span><span class="zc-num">− <MoneyText value={desconto} size="sm" /></span></div>{/if}
+        {#if taxaPct > 0}<div class="zc-ln"><span>Taxa de serviço {taxaPct}%</span><span class="zc-num">+ <MoneyText value={taxaValor} size="sm" /></span></div>{/if}
+        {#if pagamentosParciais.length > 0}
+          <div class="zc-ln ok"><span>Já pago (parcial)</span><span class="zc-num">− <MoneyText value={jaPago} size="sm" /></span></div>
+          <ul class="zc-parciais">
+            {#each pagamentosParciais as p (p.id)}
+              <li>
+                <span>{formatPaymentMethod(p.forma_pagamento)}</span>
+                <MoneyText value={p.valor} size="sm" />
+                <button type="button" on:click={() => removerPagamentoParcial(p)} aria-label="Remover pagamento parcial" title="Remover"><X size={14} strokeWidth={1.75} /></button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+
+        <div class="zc-total">
+          <span>{pagamentosParciais.length > 0 ? (saldoMesa <= 0.001 ? 'Pago integralmente' : 'Saldo a pagar') : 'Total'}</span>
+          <MoneyText value={pagamentosParciais.length > 0 ? saldoMesa : total} size="lg" animate />
+        </div>
+        {#if comanda.num_pessoas > 1 && total > 0}
+          <p class="zc-per">Por pessoa ({comanda.num_pessoas}) <MoneyText value={total / comanda.num_pessoas} size="sm" /></p>
+        {/if}
+
+        <div class="zc-two">
+          <Button variant="outlined" size="touch" onclick={abrirParcialModal} disabled={itens.length === 0 || saldoMesa <= 0.001} aria-describedby={itens.length === 0 || saldoMesa <= 0.001 ? 'mesa-actions-hint' : undefined}><Split strokeWidth={1.75} />Pagamento parcial</Button>
+          <Button variant="outlined" size="touch" onclick={() => (preContaOpen = true)} disabled={itens.length === 0} aria-describedby={itens.length === 0 ? 'mesa-actions-hint' : undefined}><Receipt strokeWidth={1.75} />Pré-conta</Button>
+        </div>
+        <Button variant="primary" size="cta" class="on-action zc-cta" onclick={abrirCloseModal} disabled={itens.length === 0} aria-describedby={itens.length === 0 ? 'mesa-actions-hint' : undefined}>
+          {saldoMesa <= 0.001 && pagamentosParciais.length > 0 ? 'Confirmar fechamento' : 'Fechar mesa'}
+          <MoneyText value={saldoMesa > 0 || pagamentosParciais.length === 0 ? saldoMesa : 0} class="zc-cta-total" />
+        </Button>
+        {#if itens.length === 0}
+          <InlineHelper id="mesa-actions-hint" compact message="Adicione um item à comanda para liberar a pré-conta e o fechamento da mesa." />
+        {:else if saldoMesa <= 0.001}
+          <InlineHelper id="mesa-actions-hint" compact message="A mesa já está paga; não há saldo para registrar outro pagamento parcial." />
+        {/if}
+      </div>
+    </aside>
+  </div>
+
+  {#if itens.length > 0 && !showMobileCart}
+    <button type="button" class="zc-cartbar" on:click={abrirMobileCart} aria-label="Ver comanda">
+      <span class="zc-cartbar-n">{itens.length}</span>
+      <span class="zc-cartbar-l">Ver comanda<small>Mesa {String(mesa.numero).padStart(2, '0')}{pagamentosParciais.length > 0 && saldoMesa > 0.001 ? ' · saldo' : ''}</small></span>
+      <MoneyText value={pagamentosParciais.length > 0 ? saldoMesa : total} class="zc-cartbar-t" animate />
+      <span class="zc-cartbar-c" aria-hidden="true"><ChevronUp size={20} strokeWidth={1.75} /></span>
+    </button>
+  {/if}
 {:else}
   <div class="comanda-shell">
     <!-- LADO PRODUTOS -->
@@ -3661,4 +3849,123 @@
       transform: none;
     }
   }
+
+  /* ═══ Comanda da mesa · Zelo Design System (only when $zeloSurface; mockup 01) — colour and type only through tokens ═══ */
+  .zc { height: 100%; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 400px; background: var(--bg-app); color: var(--text-main); font-family: var(--zelo-font-ui); }
+  .zc-prod { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 24px 28px 0; }
+  .zc-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .zc-eyebrow { margin: 0; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  .zc-back { display: inline-flex; align-items: center; gap: 2px; color: var(--text-label); text-decoration: none; }
+  .zc-back:hover { color: var(--text-main); }
+  .zc-title-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+  .zc-title { margin: 0; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  .zc-pill { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px; border-radius: var(--zelo-radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-panel); color: var(--text-label); font: var(--type-caption); font-weight: 500; }
+  .zc-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
+  .zc-pill[data-status="livre"] i { background: var(--status-success-text); }
+  .zc-pill[data-status="fechando"] { background: var(--status-warning-bg); border-color: var(--status-warning-border); color: var(--status-warning-text); }
+  .zc-pill[data-status="fechando"] i { background: var(--status-warning-text); }
+  .zc-head-acts { display: flex; gap: 8px; }
+  .zc-head-acts :global(.zc-danger) { color: var(--status-error-text); }
+  .zc :global(.zc-cats) { margin-top: 14px; flex: none; }
+  .zc-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); grid-auto-rows: 118px; gap: 12px; align-content: start; padding: 16px 2px 24px; }
+  .zc-grid :global(.zc-out) { opacity: 0.55; }
+  .zc-empty-prod { grid-column: 1 / -1; margin: 24px 0; text-align: center; font: var(--type-body); color: var(--text-muted); }
+
+  .zc-cart { display: flex; flex-direction: column; min-height: 0; background: var(--bg-panel); border-left: 1px solid var(--border-subtle); }
+  .zc-handle, .zc-mobile-only, .zc-scrim { display: none; }
+  .zc-cart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 22px 20px 14px; border-bottom: 1px solid var(--border-subtle); }
+  .zc-heading { margin: 4px 0 0; font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
+  .zc-people { display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 4px 0 10px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); color: var(--text-label); }
+  .zc-people b { min-width: 22px; text-align: center; font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .zc-people button, .zc-step button { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--text-label); transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  .zc-people button:hover:not(:disabled), .zc-step button:hover:not(:disabled) { color: var(--text-main); background: var(--bg-sunken); }
+  .zc-people button:active:not(:disabled), .zc-step button:active:not(:disabled) { transform: scale(0.9); transition-duration: var(--zelo-dur-fast); }
+  .zc-people button:disabled, .zc-step button:disabled { opacity: 0.4; }
+  .zc-icon-btn { width: 36px; height: 36px; border-radius: 10px; place-items: center; color: var(--text-label); background: var(--bg-sunken); }
+
+  .zc-items { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px; }
+  .zc-items ul { list-style: none; margin: 0; padding: 0; }
+  .zc-item { display: flex; justify-content: space-between; gap: 12px; padding: 12px 8px; border-bottom: 1px solid var(--border-subtle); }
+  .zc-item:last-child { border-bottom: 0; }
+  .zc-item.editing { flex-direction: column; }
+  .zc-item-l { min-width: 0; flex: 1; }
+  .zc-item-nm { margin: 0; font: var(--type-body-strong); letter-spacing: var(--type-body-strong-tracking); overflow-wrap: anywhere; }
+  .zc-item-sub { margin: 2px 0 0; font: var(--type-caption); color: var(--text-muted); }
+  .zc-item-unit { margin: 3px 0 0; font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); font-variant-numeric: tabular-nums; font-weight: 400; color: var(--text-muted); }
+  .zc-obs { display: inline-flex; align-items: center; gap: 5px; margin: 6px 0 0; padding: 3px 8px; border-radius: 7px; background: var(--bg-sunken); font: var(--type-caption); color: var(--text-label); }
+  .zc-obs-link { display: block; margin-top: 6px; font: var(--type-caption); color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; }
+  .zc-obs-link:hover:not(:disabled) { color: var(--text-main); }
+  .zc-obs-link:disabled { opacity: 0.5; text-decoration: none; }
+  .zc-obs-edit { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font: var(--type-label); color: var(--text-label); }
+  .zc-obs-edit textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-input); color: var(--text-main); font: var(--type-body); resize: vertical; outline: none; }
+  .zc-obs-edit textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--focus); }
+  .zc-obs-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .zc-paid { display: inline-flex; margin-top: 6px; padding: 2px 7px; border-radius: 6px; background: var(--status-success-bg); color: var(--status-success-text); font: var(--type-caption); font-weight: 500; }
+  .zc-item-r { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+  .zc-item.editing .zc-item-r { flex-direction: row; align-items: center; justify-content: space-between; }
+  .zc-tag { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border-radius: 6px; background: var(--bg-sunken); color: var(--text-label); font: var(--type-caption); font-weight: 500; }
+  .zc-step { display: inline-flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; }
+  .zc-step b { min-width: 22px; text-align: center; font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); font-variant-numeric: tabular-nums; }
+  .zc-kitchen { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 9px; border-radius: 8px; background: var(--primary); color: var(--primary-text); font: var(--type-caption); font-weight: 500; transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  .zc-kitchen:active:not(:disabled) { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+  .zc-kitchen:disabled { opacity: 0.6; }
+  .zc-empty { height: 100%; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; color: var(--text-muted); }
+  .zc-empty p { margin: 0; max-width: 220px; font: var(--type-caption); }
+
+  .zc-foot { flex: none; padding: 12px 20px 20px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; }
+  .zc-adj-toggle { display: flex; align-items: center; gap: 8px; height: 34px; margin: 0 -6px 4px; padding: 0 6px; border-radius: 8px; font: var(--type-label); letter-spacing: var(--type-label-tracking); color: var(--text-label); }
+  .zc-adj-toggle:hover { background: var(--bg-sunken); color: var(--text-main); }
+  .zc-adj-toggle :global(.zc-adj-chev) { margin-left: auto; transform: rotate(180deg); transition: transform var(--zelo-dur-base) var(--zelo-ease-spring); }
+  .zc-adj-toggle.open :global(.zc-adj-chev) { transform: none; }
+  .zc-adj { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+  .zc-adj label { display: flex; flex-direction: column; gap: 4px; font: var(--type-caption); color: var(--text-muted); }
+  .zc-adj input { height: 40px; width: 100%; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-input); color: var(--text-main); font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; outline: none; }
+  .zc-adj input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--focus); }
+  .zc-adj input { appearance: textfield; -moz-appearance: textfield; }
+  .zc-adj input::-webkit-inner-spin-button, .zc-adj input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .zc-ln { display: flex; justify-content: space-between; align-items: center; min-height: 26px; font: var(--type-body); color: var(--text-label); }
+  .zc-ln.ok { color: var(--status-success-text); }
+  .zc-ln.ok :global(.money small) { color: inherit; }
+  .zc-num { display: inline-flex; align-items: baseline; gap: 3px; font-family: var(--zelo-font-num); }
+  .zc-parciais { list-style: none; margin: 2px 0 4px; padding: 0 0 0 12px; border-left: 2px solid var(--border-subtle); }
+  .zc-parciais li { display: flex; align-items: center; gap: 8px; min-height: 28px; font: var(--type-caption); color: var(--text-muted); }
+  .zc-parciais li span:first-child { flex: 1; }
+  .zc-parciais button { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; color: var(--text-muted); }
+  .zc-parciais button:hover { background: var(--status-error-bg); color: var(--status-error-text); }
+  .zc-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border-subtle); }
+  .zc-total > span:first-child { font: var(--type-body-strong); letter-spacing: var(--type-body-strong-tracking); }
+  .zc-per { display: flex; justify-content: flex-end; align-items: baseline; gap: 6px; margin: 4px 0 0; font: var(--type-caption); color: var(--text-muted); }
+  .zc-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .zc-foot :global(.zc-cta) { margin-top: 10px; justify-content: flex-start; }
+  .zc-foot :global(.zc-cta-total) { margin-left: auto; font-size: 19px; }
+  .zc-foot :global(.zc-cta-total small) { color: inherit; opacity: 0.72; }
+  .zc-cartbar { display: none; }
+
+  @media (max-width: 1023px) {
+    .zc { grid-template-columns: minmax(0, 1fr) 340px; }
+    .zc-prod { padding: 20px 18px 0; }
+  }
+  @media (max-width: 767px) {
+    .zc { grid-template-columns: minmax(0, 1fr); }
+    .zc-prod { padding: 16px 16px 0; }
+    .zc-head { margin-bottom: 12px; }
+    .zc-head-acts { width: 100%; }
+    .zc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-bottom: 150px; }
+    .zc-cart { position: fixed; left: 0; right: 0; bottom: var(--mobile-bottom-nav-offset); top: 56px; z-index: 60; border-left: 0; border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0; box-shadow: var(--elevation-float); transform: translateY(105%); transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+    .zc-cart.open { transform: none; }
+    .zc-handle { display: block; flex: none; padding: 9px 0 0; }
+    .zc-handle span { display: block; width: 40px; height: 5px; margin: 0 auto; border-radius: 3px; background: var(--border-strong); }
+    .zc-cart-head { padding-top: 10px; align-items: center; }
+    .zc-mobile-only { display: grid; }
+    .zc-scrim { display: block; position: fixed; inset: 0; z-index: 55; border: 0; background: color-mix(in srgb, var(--shadow-color) 42%, transparent); }
+    .zc-cartbar { display: flex; align-items: center; gap: 12px; position: fixed; left: 12px; right: 12px; bottom: calc(var(--mobile-bottom-nav-offset) + 12px); z-index: 40; height: 62px; padding: 0 10px; border-radius: 18px; background: var(--primary); color: var(--primary-text); box-shadow: var(--elevation-float); text-align: left; transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+    .zc-cartbar:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+    .zc-cartbar-n { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border-radius: 12px; background: color-mix(in srgb, var(--primary-text) 12%, transparent); font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; }
+    .zc-cartbar-l { font: var(--type-body-strong); font-weight: 600; font-size: 16px; white-space: nowrap; }
+    .zc-cartbar-l small { display: block; font: var(--type-caption); opacity: 0.62; margin-top: 2px; }
+    .zc-cartbar :global(.zc-cartbar-t) { margin-left: auto; font-size: 18px; white-space: nowrap; }
+    .zc-cartbar :global(.zc-cartbar-t small) { color: inherit; opacity: 0.62; }
+    .zc-cartbar-c { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 9px; background: color-mix(in srgb, var(--primary-text) 12%, transparent); }
+  }
+  @media (prefers-reduced-motion: reduce) { .zc-cart, .zc-cartbar { transition: none; } }
 </style>

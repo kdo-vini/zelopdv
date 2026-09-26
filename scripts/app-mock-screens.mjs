@@ -47,6 +47,12 @@ const tables = {
   ],
   mesas: process.env.MESAS ? Array.from({ length: 12 }, (_, i) => ({ id: `m${i + 1}`, numero: i + 1, id_usuario: UID, ativa: true, mapa_ordem: i, capacidade: [4, 4, 2, 6, 4, 2, 8, 4, 4, 4, 2, 6][i], status: ['livre', 'ocupada', 'ocupada', 'livre', 'fechando', 'livre', 'ocupada', 'livre', 'ocupada', 'livre', 'livre', 'ocupada'][i] })) : [],
   comandas: process.env.MESAS ? [[2, 42], [3, 12], [5, 78], [7, 65], [9, 6], [12, 28]].map(([n, min]) => ({ id: `c${n}`, id_mesa: `m${n}`, id_usuario: UID, status: 'aberta', num_pessoas: 2, aberta_em: new Date(Date.now() - min * 60000).toISOString() })) : [],
+  comanda_itens: process.env.MESAS ? [
+    { id: 'i1', id_comanda: 'c2', id_usuario: UID, id_produto: 7, nome_produto: 'Guaraná lata 350ml', quantidade: 4, preco_unitario: 6, zelo_order_item_id: 'z1' },
+    { id: 'i2', id_comanda: 'c2', id_usuario: UID, id_produto: 11, nome_produto: 'Coxinha de frango', quantidade: 1, preco_unitario: 7.5, observacao: 'Bem passada', zelo_order_item_id: 'z2' },
+    { id: 'i3', id_comanda: 'c2', id_usuario: UID, id_produto: 1, nome_produto: 'X-Bacon', quantidade: 2, preco_unitario: 29.9, observacao: 'Um sem cebola' },
+    { id: 'i4', id_comanda: 'c2', id_usuario: UID, id_produto: 6, nome_produto: 'Coca-Cola lata 350ml', quantidade: 3, preco_unitario: 6.5 },
+  ] : [],
   access_users: [], categorias: process.env.EMPTY ? [] : cats, subcategorias: [], produtos: process.env.EMPTY ? [] : prods,
   caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date(new Date().setHours(8, 0, 0, 0)).toISOString(), data_fechamento: null, valor_inicial: 200 }],
 };
@@ -63,7 +69,11 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   if (url.pathname.startsWith('/rest/v1/rpc/')) return json(null);
   const m = url.pathname.match(/^\/rest\/v1\/([a-z_]+)/);
   if (m) {
-    const rows = tables[m[1]] ?? [];
+    // PostgREST `col=eq.value` filters (enough for single-row lookups like /app/mesas/[id])
+    let rows = tables[m[1]] ?? [];
+    for (const [k, v] of url.searchParams) {
+      if (v.startsWith('eq.') && rows.some((r) => k in r)) rows = rows.filter((r) => String(r[k]) === v.slice(3));
+    }
     const single = (req.headers()['accept'] || '').includes('vnd.pgrst.object');
     const headers = { 'content-range': `0-${Math.max(0, rows.length - 1)}/${rows.length}` };
     if (req.method() === 'HEAD') return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', ...headers } });
