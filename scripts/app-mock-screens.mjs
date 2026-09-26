@@ -35,7 +35,7 @@ const prods = [
   P(15, 'Brigadeiro', 4, 3.5), P(17, 'Açaí 500ml', 4, 18), P(16, 'Bolo de cenoura (fatia)', 4, 8.9),
 ];
 const tables = {
-  subscriptions: [{ id: 's1', user_id: UID, status: 'active', plan_tier: 'pdv', current_period_end: future, has_zelo_menu: false, has_mesas: !!process.env.MESAS, has_acessos: false }],
+  subscriptions: [{ id: 's1', user_id: UID, status: 'active', plan_tier: 'pdv', current_period_end: future, has_zelo_menu: false, has_mesas: !!process.env.MESAS, has_mesas_addon: !!process.env.MESAS, has_acessos: false }],
   empresa_perfil: [{ id: 'e1', user_id: UID, nome_exibicao: 'Padaria Bom Dia', contato: '11999990000', documento: '11222333000181', tabelas_preco_ativo: true, tabela_preco_1_nome: 'Balcão', tabela_preco_2_nome: 'iFood', tabela_preco_3_nome: 'Atacado', onboarding_completed: true, plataformas_pagamento: [] }],
   zelomenu_modifier_groups: [
     { id: 901, id_produto: 17, nome: 'Tamanho', tipo: 'variacao', modo_preco: 'substituir', min_selecoes: 1, max_selecoes: 1, permite_quantidade: false, ativo: true, ordem: 1 },
@@ -45,6 +45,8 @@ const tables = {
     { id: 911, id_grupo: 901, nome: '300ml', price_delta: 14, ativo: true, ordem: 1 }, { id: 912, id_grupo: 901, nome: '500ml', price_delta: 18, ativo: true, ordem: 2 },
     { id: 921, id_grupo: 902, nome: 'Granola', price_delta: 2, ativo: true, ordem: 1 }, { id: 922, id_grupo: 902, nome: 'Leite condensado', price_delta: 3, ativo: true, ordem: 2 }, { id: 923, id_grupo: 902, nome: 'Banana', price_delta: 0, ativo: true, ordem: 3 },
   ],
+  mesas: process.env.MESAS ? Array.from({ length: 12 }, (_, i) => ({ id: `m${i + 1}`, numero: i + 1, id_usuario: UID, ativa: true, mapa_ordem: i, capacidade: [4, 4, 2, 6, 4, 2, 8, 4, 4, 4, 2, 6][i], status: ['livre', 'ocupada', 'ocupada', 'livre', 'fechando', 'livre', 'ocupada', 'livre', 'ocupada', 'livre', 'livre', 'ocupada'][i] })) : [],
+  comandas: process.env.MESAS ? [[2, 42], [3, 12], [5, 78], [7, 65], [9, 6], [12, 28]].map(([n, min]) => ({ id: `c${n}`, id_mesa: `m${n}`, id_usuario: UID, status: 'aberta', num_pessoas: 2, aberta_em: new Date(Date.now() - min * 60000).toISOString() })) : [],
   access_users: [], categorias: process.env.EMPTY ? [] : cats, subcategorias: [], produtos: process.env.EMPTY ? [] : prods,
   caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date(new Date().setHours(8, 0, 0, 0)).toISOString(), data_fechamento: null, valor_inicial: 200 }],
 };

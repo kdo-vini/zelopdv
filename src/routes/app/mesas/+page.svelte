@@ -11,6 +11,10 @@
   import { readSnapshot, saveSnapshot } from '$lib/offline/operations';
   import { MESA_SNAPSHOT } from '$lib/finance/offlineMesas';
   import { reorderMesas, sortMesasForMap } from '$lib/mesasSort';
+  import { zeloSurface } from '$lib/theme/surface';
+  import { UnderlineTabs } from '$lib/components/zelo';
+  import { Button } from '$lib/components/ui/button';
+  import { Clock, GripVertical, Settings2, Users } from 'lucide-svelte';
 
   let userId = '';
   let ownerUserId = '';
@@ -300,6 +304,12 @@
   $: livres   = mesas.filter(m => m.status === 'livre').length;
   $: ocupadas = mesas.filter(m => m.status === 'ocupada').length;
   $: fechando = mesas.filter(m => m.status === 'fechando').length;
+  $: filtroTabs = [
+    { value: 'todas', label: 'Todas', count: mesas.length },
+    { value: 'livre', label: 'Livres', count: livres },
+    { value: 'ocupada', label: 'Ocupadas', count: ocupadas },
+    { value: 'fechando', label: 'Fechando', count: fechando },
+  ];
   $: mesasFiltradas = filtroStatus === 'todas'
     ? mesas
     : mesas.filter(m => m.status === filtroStatus);
@@ -327,6 +337,82 @@
         Gerencie mesas, comandas e divisão de conta. <strong>+R$ 30/mês</strong> (total R$ 89/mês).
       </p>
       <a href="/assinatura?addon=mesas" class="btn-primary">Ativar Módulo Mesas</a>
+    </div>
+  {:else if $zeloSurface}
+    <!-- Zelo Design System (mockup 01 aprovado, docs/design-system/mockups/01-mesas.html).
+         Same state and handlers as the legacy branch below: filters, drag-to-reorder, open. -->
+    <div class="zm">
+      <header class="zm-head">
+        <div>
+          <p class="zm-eyebrow">PDV / Mesas</p>
+          <h1 class="zm-title">Mesas</h1>
+        </div>
+        <div class="zm-summary" aria-label="Resumo do status das mesas">
+          <span class="zm-pill" data-status="livre"><i aria-hidden="true"></i><b>{livres}</b> {livres === 1 ? 'livre' : 'livres'}</span>
+          <span class="zm-pill" data-status="ocupada"><i aria-hidden="true"></i><b>{ocupadas}</b> {ocupadas === 1 ? 'ocupada' : 'ocupadas'}</span>
+          {#if fechando > 0}<span class="zm-pill" data-status="fechando"><i aria-hidden="true"></i><b>{fechando}</b> fechando</span>{/if}
+          {#if !isSubUser}
+            <Button variant="outlined" size="md" href="/gestao/mesas"><Settings2 strokeWidth={1.75} />Configurar mesas</Button>
+          {/if}
+        </div>
+      </header>
+
+      {#if mesas.length > 0}
+        <div class="zm-toolbar">
+          <UnderlineTabs tabs={filtroTabs} bind:value={filtroStatus} label="Filtrar por status" />
+          <p class="zm-hint">{#if filtroStatus === 'todas'}<GripVertical size={16} strokeWidth={1.75} aria-hidden="true" />Arraste para reorganizar · toque para abrir{:else}Toque para abrir{/if}</p>
+        </div>
+      {/if}
+
+      {#if loading}
+        <p class="zm-muted">Carregando mesas…</p>
+      {:else if mesas.length === 0}
+        <div class="zm-empty">
+          <h2>Nenhuma mesa cadastrada</h2>
+          <p>Cadastre suas mesas para começar a abrir comandas.</p>
+          <Button variant="primary" size="touch" href="/gestao/mesas">Cadastrar mesas</Button>
+        </div>
+      {:else if mesasFiltradas.length === 0}
+        <div class="zm-empty">
+          <h2>Nenhuma mesa neste status</h2>
+          <p>Tente outro filtro acima.</p>
+        </div>
+      {:else}
+        <div class="zm-grid" class:is-reordering={!!drag?.active} class:saving-order={savingOrder}>
+          {#each mesasFiltradas as mesa, index (mesa.id)}
+            {@const tempo = mesa.status === 'ocupada' || mesa.status === 'fechando'
+              ? formatTempoAberto(comandasAbertas.get(mesa.id), now)
+              : null}
+            <button
+              type="button"
+              class="zm-tile"
+              class:is-dragging={drag?.active && String(drag.mesaId) === String(mesa.id)}
+              data-status={mesa.status}
+              data-mesa-id={mesa.id}
+              on:pointerdown={(e) => onTilePointerDown(e, mesa, index)}
+              on:click={() => { if (filtroStatus !== 'todas') void abrirMesa(mesa); }}
+              disabled={opening === mesa.id || savingOrder}
+              aria-label={`Mesa ${mesa.numero}, ${statusLabel(mesa.status)}`}
+              style={filtroStatus === 'todas' ? 'touch-action: none;' : undefined}
+            >
+              <span class="zm-tile-top">
+                <span class="zm-num">{String(mesa.numero).padStart(2, '0')}</span>
+                <span class="zm-pill sm" data-status={mesa.status}><i aria-hidden="true"></i>{statusLabel(mesa.status)}</span>
+              </span>
+              <span class="zm-tile-foot">
+                {#if opening === mesa.id}
+                  <span class="zm-meta">Abrindo…</span>
+                {:else if tempo}
+                  <span class="zm-meta num"><Clock size={14} strokeWidth={1.75} aria-hidden="true" /><span class="zm-open-lbl">Aberta há </span>{tempo}</span>
+                {/if}
+                {#if mesa.capacidade}
+                  <span class="zm-meta"><Users size={14} strokeWidth={1.75} aria-hidden="true" />{mesa.capacidade} {mesa.capacidade === 1 ? 'lugar' : 'lugares'}</span>
+                {/if}
+              </span>
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
   {:else}
     <header class="map-header border-b border-slate-800/70 pb-4">
@@ -712,5 +798,54 @@
     .tile-num { font-size: 1.7rem; }
     /* Toques maiores nos chips de filtro */
     .filtro-chip { padding: 0.6rem 1rem; font-size: 0.88rem; }
+  }
+  /* ═══ Zelo Design System (only rendered when $zeloSurface); colour and type only through tokens ═══ */
+  .zm { display: flex; flex-direction: column; gap: 18px; color: var(--text-main); font-family: var(--zelo-font-ui); }
+  .zm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .zm-eyebrow { margin: 0; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  .zm-title { margin: 6px 0 0; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  .zm-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .zm-pill { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: var(--zelo-radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-panel); color: var(--text-label); font: var(--type-label); letter-spacing: var(--type-label-tracking); white-space: nowrap; }
+  .zm-pill b { font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .zm-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+  .zm-pill[data-status="livre"] i { background: var(--status-success-text); }
+  .zm-pill[data-status="ocupada"] i { background: var(--primary); }
+  .zm-pill[data-status="fechando"] { background: var(--status-warning-bg); border-color: var(--status-warning-border); color: var(--status-warning-text); }
+  .zm-pill[data-status="fechando"] i { background: var(--status-warning-text); }
+  .zm-pill[data-status="fechando"] b { color: inherit; }
+  .zm-pill.sm { height: 24px; padding: 0 9px; font: var(--type-caption); font-weight: 500; }
+  .zm-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .zm-toolbar :global(.tabs) { flex: 1; min-width: 0; }
+  .zm-hint { margin: 0 0 10px; display: flex; align-items: center; gap: 6px; flex: none; font: var(--type-caption); color: var(--text-muted); }
+  .zm-muted { margin: 0; font: var(--type-body); color: var(--text-muted); }
+  .zm-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 56px 24px; text-align: center; border: 1.5px dashed var(--border-strong); border-radius: var(--zelo-radius-card); }
+  .zm-empty h2 { margin: 0; font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
+  .zm-empty p { margin: 0 0 8px; font: var(--type-body); color: var(--text-muted); }
+  .zm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .zm-grid.saving-order { opacity: 0.7; }
+  .zm-tile { height: 132px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; border-radius: var(--zelo-radius-card); border: 1px solid var(--border-strong); background: var(--bg-card); color: var(--text-main); cursor: pointer; user-select: none; transition: border-color var(--zelo-dur-fast), box-shadow var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  .zm-tile:hover:not(:disabled) { border-color: var(--primary); }
+  .zm-tile:active:not(:disabled) { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+  .zm-tile:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  .zm-tile:disabled { cursor: progress; opacity: 0.7; }
+  .zm-tile[data-status="livre"] { background: transparent; border: 1.5px dashed var(--border-strong); }
+  .zm-tile[data-status="livre"] .zm-num { color: var(--text-muted); }
+  .zm-tile[data-status="fechando"] { border-color: var(--status-warning-border); box-shadow: 0 0 0 1px var(--status-warning-border); }
+  .zm-tile.is-dragging { transform: scale(1.03); box-shadow: var(--elevation-float); border-color: var(--primary); z-index: 1; }
+  .zm-grid.is-reordering .zm-tile:not(.is-dragging) { cursor: grabbing; }
+  .zm-tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .zm-num { font: var(--type-num-xl); letter-spacing: var(--type-num-xl-tracking); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .zm-tile-foot { display: flex; flex-direction: column; gap: 5px; }
+  .zm-meta { display: inline-flex; align-items: center; gap: 6px; font: var(--type-caption); color: var(--text-muted); }
+  .zm-meta.num { font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); color: var(--text-label); }
+  @media (max-width: 767px) {
+    .zm-head { align-items: flex-start; flex-direction: column; gap: 12px; }
+    .zm-summary { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+    .zm-summary :global(a) { display: none; }
+    .zm-toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+    .zm-hint { margin: 0; }
+    .zm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .zm-tile { height: 118px; }
+    .zm-open-lbl { display: none; }
   }
 </style>
