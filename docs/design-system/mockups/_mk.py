@@ -1,6 +1,7 @@
 # Shared helpers for the Design System mockups (fonts embedded, icons, money, sidebar).
-import base64
-F='/home/user/zelopdv/static/fonts/'
+import base64, os
+ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','..'))
+F=os.path.join(ROOT,'static','fonts')+os.sep
 def ff(fam,w,f): return f"@font-face{{font-family:'{fam}';font-weight:{w};src:url(data:font/woff2;base64,{base64.b64encode(open(F+f,'rb').read()).decode()}) format('woff2')}}"
 fonts="\n".join([ff('Geist',400,'Geist-Regular.woff2'),ff('Geist',500,'Geist-Medium.woff2'),ff('Geist',600,'Geist-SemiBold.woff2'),ff('Geist Mono',500,'GeistMono-Medium.woff2'),ff('Geist Mono',600,'GeistMono-SemiBold.woff2')])
 ICON={
@@ -36,10 +37,10 @@ def sidebar(active):
         h+=f'<h6>{g}</h6>'+''.join(f'<a class="{"on" if n==active else ""}">{i(ic)}{n}</a>' for n,ic in its)
     return h+'<div class="sb-user"><span class="av">A</span>Ana · Caixa #12</div></aside>'
 
-CSS=open('/home/user/zelopdv/docs/design-system/mockups/_mockup.css').read()
+CSS=open(os.path.join(ROOT,'docs','design-system','mockups','_mockup.css'),encoding='utf-8').read()
 
 import base64 as _b64
-IFOOD_LOGO = 'data:image/png;base64,' + _b64.b64encode(open('/home/user/zelopdv/static/ifood-logo.png', 'rb').read()).decode()
+IFOOD_LOGO = 'data:image/png;base64,' + _b64.b64encode(open(os.path.join(ROOT,'static','ifood-logo.png'), 'rb').read()).decode()
 
 # Motion — same language as src/lib/motion (docs/design-system/reference/zelopdv-morph.html):
 # spring easing (ζ 0.84, ≤1% overshoot), press squash .965, blur swap (exit ~70ms, enter after),
