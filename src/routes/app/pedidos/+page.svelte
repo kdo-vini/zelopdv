@@ -43,6 +43,11 @@
   import IfoodSyncState from '$lib/components/orders/IfoodSyncState.svelte';
   import { CheckCircle2, CreditCard, MapPin, Printer, X } from 'lucide-svelte';
   import InlineHelper from '$lib/components/ui/InlineHelper.svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import { MoneyText, MorphButton } from '$lib/components/zelo';
+  import { blurSwap } from '$lib/motion/transitions.js';
+  import { Button } from '$lib/components/ui/button';
+  import { ArrowLeft, Clock, NotebookPen, Plus, RefreshCw, User } from 'lucide-svelte';
   import ModalPedidoManual from '$lib/components/modals/ModalPedidoManual.svelte';
   import { startOfflineRuntime, onOfflineChange } from '$lib/offline/runtime.js';
   import { readSnapshot, saveSnapshot } from '$lib/offline/operations.js';
@@ -710,6 +715,183 @@
       <p>Ative o ZeloMenu para receber e gerenciar pedidos online.</p>
       <a href="/gestao/extensoes">Ver extensões</a>
     </section>
+  {:else if $zeloSurface}
+    <!-- Zelo Design System (mockup 02 aprovado). Same state, handlers and permission checks as the legacy branch below. -->
+    <div class="zp">
+      <header class="zp-head">
+        <div>
+          <p class="zp-eyebrow">PDV / Pedidos</p>
+          <h1 class="zp-title">Fila de Pedidos</h1>
+        </div>
+        <div class="zp-head-acts">
+          <span class="zp-count"><b>{pedidos.length}</b> {pedidos.length === 1 ? 'na fila' : 'na fila'}</span>
+          {#if canReceiveOrders}
+            <Button variant="outlined" size="md" onclick={() => (manualOpen = true)}><Plus strokeWidth={1.75} />Criar pedido</Button>
+          {/if}
+          <Button variant="outlined" size="md" onclick={carregarPedidos} disabled={loading || polling} aria-label="Atualizar fila"><RefreshCw strokeWidth={1.75} class={polling ? 'zp-spin' : ''} />Atualizar</Button>
+        </div>
+      </header>
+
+      {#if queueUnavailable}
+        <InlineHelper compact message="Exibindo os pedidos salvos neste aparelho. Você pode criar pedidos; o andamento e os pedidos de outros aparelhos serão atualizados quando a conexão voltar." />
+      {/if}
+      {#if !canCancelOrders}
+        <InlineHelper id="pedidos-cancel-hint" compact message="Seu cargo não pode cancelar pedidos. Peça essa ação ao responsável pela operação." />
+      {/if}
+
+      {#if loading}
+        <p class="zp-muted">Carregando pedidos…</p>
+      {:else if pedidos.length === 0}
+        <div class="zp-empty">
+          <h2>Nenhum pedido na fila</h2>
+          <p>Pedidos do ZeloMenu aparecem aqui automaticamente.</p>
+        </div>
+      {:else}
+        <div class="zp-layout" class:detail-open={mobileDetailOpen}>
+          <section class="zp-queue" aria-label="Fila de pedidos">
+            {#each pedidos as pedido (pedido.id)}
+              {@const qtdItens = (pedido.pedido_itens || []).reduce((acc, item) => acc + Number(item.quantidade || 0), 0)}
+              {@const entregaCard = getOrderDeliveryPresentation(pedido)}
+              <button type="button" class="zp-card" class:on={pedido.id === pedidoSelecionado?.id} aria-pressed={pedido.id === pedidoSelecionado?.id} on:click={() => selecionarPedido(pedido.id)}>
+                <span class="zp-card-top">
+                  <span class="zp-num">#{pedido.numero_pedido}</span>
+                  <span class="zp-status" data-status={pedido.status} aria-label="Status: {statusLabel(pedido.status)}"><i aria-hidden="true"></i>{statusLabel(pedido.status)}</span>
+                </span>
+                <span class="zp-cli">{clienteLabel(pedido)}</span>
+                {#if entregaCard.address}<span class="zp-addr">{entregaCard.address}{entregaCard.neighborhood ? ` · ${entregaCard.neighborhood}` : ''}</span>{/if}
+                <span class="zp-card-foot">
+                  {#if isIfoodOrder(pedido)}<OrderSourceBadge order={pedido} onlyExternal />{/if}
+                  <span class="zp-meta"><Clock size={13} strokeWidth={1.75} aria-hidden="true" />{formatTime(pedido.criado_em)}</span>
+                  <span class="zp-meta">{qtdItens} {qtdItens === 1 ? 'item' : 'itens'}</span>
+                  <MoneyText value={Number(pedido.total || 0)} size="sm" class="zp-card-total" />
+                </span>
+                {#if pedido.localOnly}<span class="zp-local">{['needs_review', 'needs_auth'].includes(pedido.syncStatus) ? 'Conferir sincronização' : 'Salvo neste aparelho'}</span>{/if}
+                {#if isIfoodOrder(pedido)}<IfoodSyncState order={pedido} syncState={ifoodSync[pedido.id] || null} now={nowTick} compact />{/if}
+              </button>
+            {/each}
+          </section>
+
+          <section class="zp-det">
+            {#if pedidoSelecionado}
+              {#key pedidoSelecionado.id}
+              <div class="zp-det-in" in:blurSwap>
+                <button type="button" class="zp-back" on:click={() => (mobileDetailOpen = false)} aria-label="Voltar para fila"><ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />Voltar para fila</button>
+                <header class="zp-det-head">
+                  <div>
+                    {#if selecionadoIfood}<OrderSourceBadge order={pedidoSelecionado} />{:else}<p class="zp-eyebrow">Pedido</p>{/if}
+                    <h2 class="zp-title">#{pedidoSelecionado.numero_pedido}</h2>
+                    <p class="zp-sub"><User size={15} strokeWidth={1.75} aria-hidden="true" />{clienteLabel(pedidoSelecionado)}<span class="zp-sep" aria-hidden="true">·</span><Clock size={15} strokeWidth={1.75} aria-hidden="true" />{formatTime(pedidoSelecionado.criado_em)}</p>
+                    {#if pedidoSelecionado.fulfillment?.scheduledAt}<p class="zp-sub">Previsto: {new Date(pedidoSelecionado.fulfillment.scheduledAt).toLocaleString('pt-BR')}</p>{/if}
+                    {#if agendaSelecionada.scheduled}
+                      <p class="zp-sub">Agendado{#if agendaSelecionada.windowStart}: entrega entre {formatTime(agendaSelecionada.windowStart)} e {formatTime(agendaSelecionada.windowEnd)}{/if}{#if agendaSelecionada.preparationStartAt} · preparo a partir de {formatTime(agendaSelecionada.preparationStartAt)}{/if}</p>
+                    {/if}
+                  </div>
+                  <div class="zp-det-acts">
+                    <span class="zp-status" data-status={pedidoSelecionado.status}><i aria-hidden="true"></i>{statusLabel(pedidoSelecionado.status)}</span>
+                    <Button variant="outlined" size="md" onclick={() => reimprimirPedido(pedidoSelecionado)} disabled={reimprimindo} title="Enviar o pedido novamente para a impressora"><Printer strokeWidth={1.75} />{reimprimindo ? 'Imprimindo…' : 'Reimprimir'}</Button>
+                  </div>
+                </header>
+
+                {#if selecionadoIfood}
+                  <div class="zp-ifood">
+                    <IfoodSyncState order={pedidoSelecionado} syncState={syncSelecionado} now={nowTick} />
+                    {#if codigosSelecionados.length}
+                      <dl class="zp-codes" aria-label="Códigos do iFood">
+                        {#each codigosSelecionados as codigo (codigo.kind)}
+                          <div><dt>{codigo.label}</dt><dd>{codigo.value}</dd></div>
+                        {/each}
+                      </dl>
+                    {/if}
+                    {#if itensSemVinculo > 0}
+                      <InlineHelper compact message={itensSemVinculo === 1
+                        ? '1 item ainda não está vinculado a um produto do Zelo. O pedido segue normalmente, sem baixa de estoque desse item.'
+                        : `${itensSemVinculo} itens ainda não estão vinculados a produtos do Zelo. O pedido segue normalmente, sem baixa de estoque desses itens.`} />
+                    {/if}
+                  </div>
+                {/if}
+
+                <div class="zp-scroll">
+                  <div class="zp-blocks" aria-label="Informações principais do pedido">
+                    <section class="zp-blk">
+                      <p class="zp-eyebrow"><MapPin size={13} strokeWidth={1.75} aria-hidden="true" />Entrega</p>
+                      <p class="zp-blk-v">{entregaSelecionada.address || 'Não informado'}</p>
+                      <p class="zp-blk-s">{entregaSelecionada.neighborhood || 'Bairro não informado'}</p>
+                    </section>
+                    <section class="zp-blk">
+                      <p class="zp-eyebrow"><CreditCard size={13} strokeWidth={1.75} aria-hidden="true" />Pagamento</p>
+                      <p class="zp-blk-v">{pagamentoSelecionado.label}</p>
+                      {#if pagamentoSelecionado.isCash}<p class="zp-blk-s">Troco: {pagamentoSelecionado.change === null ? '(não informado)' : formatMoney(pagamentoSelecionado.change)}</p>{/if}
+                    </section>
+                    {#if pedidoSelecionado.observacoes}
+                      <section class="zp-blk wide">
+                        <p class="zp-eyebrow"><NotebookPen size={13} strokeWidth={1.75} aria-hidden="true" />Observações</p>
+                        <p class="zp-blk-v">{pedidoSelecionado.observacoes}</p>
+                      </section>
+                    {/if}
+                  </div>
+
+                  <ul class="zp-items">
+                    {#each itensSelecionados as item (item.id)}
+                      <li>
+                        <span class="zp-q">{item.quantidade}×</span>
+                        <div>
+                          <p class="zp-item-nm">{item.nome}</p>
+                          {#each item.modifierGroups as grupo (grupo.groupName)}
+                            <p class="zp-item-mod">{grupo.groupName}: {grupo.optionNames.join(', ')}</p>
+                          {/each}
+                          <p class="zp-item-u"><MoneyText value={item.preco} size="sm" /> cada</p>
+                        </div>
+                        <MoneyText value={item.preco * item.quantidade} size="sm" class="zp-item-t" />
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+
+                <footer class="zp-foot">
+                  <div class="zp-total"><span>Total</span><MoneyText value={totalPedido} size="lg" animate /></div>
+                  <div class="zp-foot-acts">
+                    <Button variant="quiet" size="touch" class="zp-cancel" aria-describedby={!canCancelOrders ? 'pedidos-cancel-hint' : undefined} disabled={!canCancelOrders || (selecionadoIfood && !ifoodCanCancel(pedidoSelecionado))} onclick={() => excluirPedido(pedidoSelecionado)}>Cancelar pedido</Button>
+                    {#if selecionadoIfood}
+                      <MorphButton
+                        state={ifoodSending ? 'loading' : 'idle'}
+                        size="touch"
+                        class="zp-next"
+                        loadingLabel="Enviando ao iFood…"
+                        onclick={() => avancarPedidoCanonico(pedidoSelecionado)}
+                        disabled={ifoodComandoPendente || avancoSelecionado.kind !== 'ifood_command' || !ifoodIntentPermitido || pedidoSelecionado.localOnly}
+                        aria-describedby={!ifoodIntentPermitido ? 'pedidos-ifood-permission-hint' : undefined}
+                      >
+                        <CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />{ifoodComandoPendente ? 'Aguardando o iFood…' : canonicalActionLabel(pedidoSelecionado)}
+                      </MorphButton>
+                    {:else}
+                      <MorphButton
+                        state={fechandoPedido ? 'loading' : 'idle'}
+                        size="touch"
+                        class="zp-next"
+                        loadingLabel="Confirmando…"
+                        onclick={() => avancarPedidoCanonico(pedidoSelecionado)}
+                        disabled={pedidoSelecionado.status === 'pending_payment' || (['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders)}
+                        aria-describedby={['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders ? 'pedidos-receive-hint' : undefined}
+                      >
+                        <CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />{canonicalActionLabel(pedidoSelecionado)}
+                      </MorphButton>
+                    {/if}
+                  </div>
+                  {#if selecionadoIfood && !ifoodIntentPermitido}
+                    <InlineHelper id="pedidos-ifood-permission-hint" compact message="Seu cargo não pode fazer esta etapa do pedido. Peça ao responsável pela operação." />
+                  {:else if !selecionadoIfood && ['ready', 'out_for_delivery'].includes(pedidoSelecionado.status) && !canReceiveOrders}
+                    <InlineHelper id="pedidos-receive-hint" compact message="Seu cargo não pode concluir pedidos. Peça essa ação ao responsável pela operação." />
+                  {/if}
+                </footer>
+              </div>
+              {/key}
+            {:else}
+              <p class="zp-muted zp-pick">Selecione um pedido na fila para ver os detalhes.</p>
+            {/if}
+          </section>
+        </div>
+      {/if}
+    </div>
   {:else}
     <header class="page-header">
       <div class="title-block">
@@ -1764,5 +1946,96 @@
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 1rem;
+  }
+
+  /* ═══ Fila de Pedidos · Zelo Design System (only when $zeloSurface; mockup 02) — colour and type only through tokens ═══ */
+  .zp { display: flex; flex-direction: column; gap: 16px; height: 100%; min-height: 0; color: var(--text-main); font-family: var(--zelo-font-ui); }
+  .zp-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .zp-eyebrow { margin: 0; display: inline-flex; align-items: center; gap: 5px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  .zp-title { margin: 6px 0 0; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  .zp-head-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .zp-count { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-pill); background: var(--bg-panel); font: var(--type-label); color: var(--text-label); }
+  .zp-count b { font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); color: var(--text-main); }
+  .zp-head-acts :global(.zp-spin) { animation: zp-spin 0.8s linear infinite; }
+  @keyframes zp-spin { to { transform: rotate(360deg); } }
+  .zp-muted { margin: 0; font: var(--type-body); color: var(--text-muted); }
+  .zp-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 56px 24px; text-align: center; border: 1.5px dashed var(--border-strong); border-radius: var(--zelo-radius-card); }
+  .zp-empty h2 { margin: 0; font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
+  .zp-empty p { margin: 0; font: var(--type-body); color: var(--text-muted); }
+  .zp-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 20px; }
+  .zp-queue { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; padding: 2px 2px 20px; }
+  .zp-card { display: flex; flex-direction: column; gap: 6px; padding: 14px; text-align: left; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-card); color: var(--text-main); transition: border-color var(--zelo-dur-fast), box-shadow var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  .zp-card:hover { border-color: var(--border-strong); }
+  .zp-card:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+  .zp-card:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+  .zp-card.on { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+  .zp-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .zp-num { font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .zp-cli { font: var(--type-body-strong); letter-spacing: var(--type-body-strong-tracking); }
+  .zp-addr { font: var(--type-caption); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .zp-card-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .zp-meta { display: inline-flex; align-items: center; gap: 4px; font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); font-weight: 400; color: var(--text-muted); }
+  .zp-card-foot :global(.zp-card-total) { margin-left: auto; font-size: 16px; }
+  .zp-local { font: var(--type-caption); color: var(--status-warning-text); }
+  .zp-status { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-pill); background: var(--bg-panel); color: var(--text-label); font: var(--type-caption); font-weight: 500; white-space: nowrap; }
+  .zp-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+  .zp-status:is([data-status="pending_review"], [data-status="pending_payment"]) { background: var(--status-warning-bg); border-color: var(--status-warning-border); color: var(--status-warning-text); }
+  .zp-status:is([data-status="pending_review"], [data-status="pending_payment"]) i { background: var(--status-warning-text); }
+  .zp-status:is([data-status="ready"], [data-status="delivered"]) { background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success-text); }
+  .zp-status:is([data-status="ready"], [data-status="delivered"]) i { background: var(--status-success-text); }
+  .zp-status:is([data-status="rejected"], [data-status="cancelled"]) { background: var(--status-error-bg); border-color: var(--status-error-border); color: var(--status-error-text); }
+  .zp-status:is([data-status="rejected"], [data-status="cancelled"]) i { background: var(--status-error-text); }
+  .zp-status[data-status="out_for_delivery"] i { background: var(--text-muted); }
+
+  .zp-det { min-height: 0; margin-bottom: 20px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); overflow: hidden; }
+  .zp-det-in { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+  .zp-pick { padding: 40px 24px; text-align: center; }
+  .zp-back { display: none; }
+  .zp-det-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; border-bottom: 1px solid var(--border-subtle); }
+  .zp-sub { margin: 8px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font: var(--type-body); color: var(--text-label); }
+  .zp-sep { color: var(--border-strong); }
+  .zp-det-acts { display: flex; align-items: center; gap: 8px; }
+  .zp-ifood { display: flex; flex-direction: column; gap: 10px; padding: 12px 22px; background: var(--bg-sunken); }
+  .zp-ifood:not(:has(*)) { display: none; }
+  .zp-codes { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+  .zp-codes div { padding: 6px 12px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-panel); }
+  .zp-codes dt { font: var(--type-caption); color: var(--text-muted); }
+  .zp-codes dd { margin: 0; font: var(--type-num-md); letter-spacing: 0.04em; font-weight: 600; }
+  .zp-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+  .zp-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 22px; }
+  .zp-blk { padding: 12px 14px; border: 1px solid var(--border-subtle); border-radius: 12px; }
+  .zp-blk.wide { grid-column: 1 / -1; }
+  .zp-blk .zp-eyebrow { margin-bottom: 6px; }
+  .zp-blk-v { margin: 0; font: var(--type-body-strong); overflow-wrap: anywhere; }
+  .zp-blk-s { margin: 2px 0 0; font: var(--type-caption); color: var(--text-muted); }
+  .zp-items { list-style: none; margin: 0; padding: 0 22px 12px; }
+  .zp-items li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+  .zp-q { font: var(--type-num-md); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .zp-item-nm { margin: 0; font: var(--type-body-strong); }
+  .zp-item-mod { margin: 2px 0 0; font: var(--type-caption); color: var(--text-muted); }
+  .zp-item-u { margin: 4px 0 0; display: flex; align-items: baseline; gap: 4px; font: var(--type-caption); color: var(--text-muted); }
+  .zp-foot { flex: none; padding: 14px 22px 20px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 10px; }
+  .zp-total { display: flex; align-items: baseline; justify-content: space-between; }
+  .zp-total > span:first-child { font: var(--type-body-strong); }
+  .zp-foot-acts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
+  .zp-foot-acts :global(.zp-cancel) { color: var(--status-error-text); }
+  .zp-foot-acts :global(.zp-next) { --mb-h: 56px; width: 100%; }
+
+  @media (max-width: 1023px) { .zp-layout { grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); } }
+  @media (max-width: 767px) {
+    .zp-layout { grid-template-columns: minmax(0, 1fr); }
+    .zp-layout .zp-det { display: none; }
+    .zp-layout.detail-open .zp-queue { display: none; }
+    .zp-layout.detail-open .zp-det { display: block; margin-bottom: 0; }
+    .zp { height: auto; }
+    .zp-det-in { height: auto; }
+    .zp-scroll { overflow: visible; }
+    .zp-back { display: inline-flex; align-items: center; gap: 6px; height: 40px; margin: 8px 14px 0; padding: 0 8px; border-radius: 10px; font: var(--type-label); color: var(--text-label); }
+    .zp-det-head { flex-direction: column; padding: 12px 16px; }
+    .zp-blocks { grid-template-columns: 1fr; padding: 12px 16px; }
+    .zp-items { padding: 0 16px 12px; }
+    .zp-foot { padding: 12px 16px 16px; }
+    .zp-foot-acts { grid-template-columns: minmax(0, 1fr); }
+    .zp-foot-acts :global(.zp-cancel) { order: 2; }
   }
 </style>
