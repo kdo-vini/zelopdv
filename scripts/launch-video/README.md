@@ -21,7 +21,7 @@ Playwright já vem em `/opt/pw-browsers`; em outro lugar, `npx playwright instal
 | `timeline.js` | Fonte única dos tempos (cenas, toques, dings, impactos). Cena e trilha leem daqui. |
 | `scene.html` | As 10 cenas em HTML/CSS. `window.render(t)` posiciona tudo em função de `t`: sem CSS transition, sem relógio real, então cada quadro é determinístico. |
 | `render.mjs` | Abre a cena no Chromium, chama `render(i / fps)` quadro a quadro e envia JPEGs por pipe ao ffmpeg (H.264 + AAC). |
-| `audio.mjs` | Sintetiza a trilha em JS (bumbo, palmas, baixo, pads aditivos, cordas Karplus-Strong, reverb Freeverb, sidechain) e grava `out/audio.wav`. O único sample é `static/sounds/ifood-arrival.mp3`, do próprio app. |
+| `audio.mjs` | Partitura da trilha e mixagem; grava `out/audio.wav`. Os instrumentos (bumbo, palmas, baixo, pads aditivos, cordas Karplus-Strong, reverb Freeverb) vêm de `scripts/video-kit/synth.mjs`, compartilhado com `scripts/demo-video`. O único sample é `static/sounds/ifood-arrival.mp3`, do próprio app. |
 
 Roteiro: cold open "Sexta-feira, 20h47" → caos do caderninho → revelação →
 venda em 3 toques → fiado → offline → fila de pedidos (ZeloMenu) → lucro real →

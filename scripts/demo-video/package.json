@@ -1,0 +1,16 @@
+{
+  "name": "zelopdv-demo-video",
+  "private": true,
+  "description": "Vídeo demonstrativo do ZeloPDV no Design System Zelo (HyperFrames + Playwright + ffmpeg + JS)",
+  "scripts": {
+    "audio": "node audio.mjs",
+    "check": "hyperframes check",
+    "snapshot": "hyperframes snapshot",
+    "render": "hyperframes render --quality delivery --fps 30 -o out/zelopdv-demo.mp4",
+    "build": "node audio.mjs && hyperframes render --quality delivery --fps 30 -o out/zelopdv-demo.mp4"
+  },
+  "dependencies": {
+    "gsap": "3.14.2",
+    "hyperframes": "0.8.78"
+  }
+}

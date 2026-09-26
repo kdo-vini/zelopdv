@@ -1,0 +1,5 @@
+out/
+assets/audio.wav
+node_modules/
+.hyperframes/
+snapshots/
