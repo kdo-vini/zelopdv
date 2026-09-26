@@ -63,26 +63,26 @@ export function renderAdminEmailHtml(bodyText, recipient = {}) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#F5F4F1;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F4F1;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
           <tr>
-            <td style="background-color:#0b1220;padding:24px 36px;">
+            <td style="background-color:#011F4A;padding:24px 36px;">
               <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.5px;">Zelo PDV</span>
             </td>
           </tr>
           <tr>
-            <td style="padding:36px;color:#111827;font-size:15px;line-height:1.7;">
-              ${bodyHtml || '<p style="margin:0;color:#6b7280;">&nbsp;</p>'}
+            <td style="padding:36px;color:#011F4A;font-size:15px;line-height:1.7;">
+              ${bodyHtml || '<p style="margin:0;color:#5E6C80;">&nbsp;</p>'}
             </td>
           </tr>
           <tr>
-            <td style="background-color:#f9fafb;padding:20px 36px;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.6;">
-                Zelo PDV · <a href="${APP_URL}" style="color:#6b7280;">zelopdv.com.br</a> ·
-                <a href="https://wa.me/${TECHNE_WHATSAPP_NUMBER}" style="color:#6b7280;">WhatsApp</a>
+            <td style="background-color:#F5F4F1;padding:20px 36px;border-top:1px solid #E5E2DC;">
+              <p style="margin:0;color:#5E6C80;font-size:12px;line-height:1.6;">
+                Zelo PDV · <a href="${APP_URL}" style="color:#5E6C80;">zelopdv.com.br</a> ·
+                <a href="https://wa.me/${TECHNE_WHATSAPP_NUMBER}" style="color:#5E6C80;">WhatsApp</a>
               </p>
             </td>
           </tr>

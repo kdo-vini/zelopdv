@@ -56,7 +56,10 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     pedidos, gestão, relatórios, perfil, assinatura e ferramentas legíveis
     atrás da flag. Legado idêntico. Harness com hora de abertura fixa.
   - Próximo: reescrever tela a tela (mesas → pedidos/cozinha → gestão/produtos
-    → relatórios + charts → perfil/assinatura/ferramentas), depois Fases 5 e 6.
+    → relatórios + charts → perfil/assinatura/ferramentas) e Fase 6.
+  - **Fase 5 — parcial**: e-mails em navy/papel (hex literais espelham os
+    tokens; clientes de e-mail não leem CSS vars), PWA `theme_color` e
+    `<meta theme-color>` em `#011F4A`. Favicon/OG/logos aguardam os vetores.
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 

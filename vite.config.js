@@ -45,7 +45,7 @@ export default defineConfig({
         short_name: 'ZeloPDV',
         description: 'Sistema de Ponto de Venda ágil e resiliente',
         lang: 'pt-BR',
-        theme_color: '#0f172a',
+        theme_color: '#011F4A', // Zelo navy (DESIGN.md)
         icons: [
           {
             src: 'pwa-192x192.png',

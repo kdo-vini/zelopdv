@@ -1,3 +1,6 @@
+// Colours follow the Zelo Design System (DESIGN.md; values mirror src/themes/tokens.css:
+// navy #011F4A ink and action, paper #F5F4F1, line #E5E2DC, ink label/muted, status). Email clients
+// need literal hex, so they are repeated here on purpose.
 /**
  * Onboarding email templates for ZeloPDV trial sequence.
  *
@@ -49,32 +52,32 @@ function wrapEmail(bodyHtml) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#F5F4F1;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F4F1;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
 
           <!-- HEADER -->
           <tr>
-            <td style="background-color:#0b1220;padding:28px 40px;">
+            <td style="background-color:#011F4A;padding:28px 40px;">
               <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.5px;">Zelo PDV</span>
             </td>
           </tr>
 
           <!-- BODY -->
           <tr>
-            <td style="padding:40px;color:#111827;font-size:15px;line-height:1.7;">
+            <td style="padding:40px;color:#011F4A;font-size:15px;line-height:1.7;">
               ${bodyHtml}
             </td>
           </tr>
 
           <!-- FOOTER -->
           <tr>
-            <td style="background-color:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.6;">
+            <td style="background-color:#F5F4F1;padding:24px 40px;border-top:1px solid #E5E2DC;">
+              <p style="margin:0;color:#5E6C80;font-size:12px;line-height:1.6;">
                 Você recebeu este email porque criou uma conta no Zelo PDV.<br />
-                <a href="${APP_URL}" style="color:#6b7280;">zelopdv.com.br</a>
+                <a href="${APP_URL}" style="color:#5E6C80;">zelopdv.com.br</a>
               </p>
             </td>
           </tr>
@@ -88,7 +91,7 @@ function wrapEmail(bodyHtml) {
 }
 
 /** Reusable CTA button */
-function ctaButton(label, url, color = '#1d4ed8') {
+function ctaButton(label, url, color = '#011F4A') {
   return `<table cellpadding="0" cellspacing="0" border="0" style="margin:32px 0 0;">
     <tr>
       <td style="background-color:${color};border-radius:6px;">
@@ -99,15 +102,15 @@ function ctaButton(label, url, color = '#1d4ed8') {
 }
 
 /** Divider */
-const divider = '<hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0;" />';
+const divider = '<hr style="border:none;border-top:1px solid #E5E2DC;margin:28px 0;" />';
 
 /** Signature block */
 function signature(extra = '') {
   return `${divider}
-<p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+<p style="margin:0;color:#34455F;font-size:14px;line-height:1.6;">
   <strong>Vinicius</strong><br />
   Fundador do Zelo PDV<br />
-  <a href="https://wa.me/${WHATSAPP_NUMBER}" style="color:#1d4ed8;">WhatsApp</a> · <a href="${APP_URL}" style="color:#1d4ed8;">zelopdv.com.br</a>
+  <a href="https://wa.me/${WHATSAPP_NUMBER}" style="color:#011F4A;">WhatsApp</a> · <a href="${APP_URL}" style="color:#011F4A;">zelopdv.com.br</a>
   ${extra}
 </p>`;
 }
@@ -128,13 +131,13 @@ export function emailDay0(nome) {
   );
   const whatsappSetupUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${setupMsg}`;
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Tudo pronto pra começar! 👋</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#011F4A;">Tudo pronto pra começar! 👋</p>
 
 <p style="margin:0 0 16px;">${loja ? `A conta da <strong>${loja}</strong> no Zelo PDV já está ativa` : 'Seu acesso ao Zelo PDV está pronto'}. São <strong>${TRIAL_DAYS} dias gratuitos</strong> para testar tudo sem precisar colocar o cartão.</p>
 
 <p style="margin:0 0 16px;">Para começar, é simples:</p>
 
-<ol style="margin:0 0 16px;padding-left:24px;color:#374151;">
+<ol style="margin:0 0 16px;padding-left:24px;color:#34455F;">
   <li style="margin-bottom:8px;">Cadastre seus <strong>produtos</strong> (Gestão → Produtos)</li>
   <li style="margin-bottom:8px;">Abra um <strong>caixa</strong> (Gestão → Caixa → Abrir)</li>
   <li style="margin-bottom:8px;">Faça sua <strong>primeira venda</strong> no PDV</li>
@@ -142,7 +145,7 @@ export function emailDay0(nome) {
 
 <p style="margin:0 0 16px;">E se não quiser fazer isso sozinho, <strong>a gente faz junto com você</strong>. São uns 15 minutos no WhatsApp: eu ou alguém do time senta com você, cadastra os produtos e deixa tudo pronto pra usar no balcão. Não custa nada.</p>
 
-${ctaButton('Configurar junto com o time →', whatsappSetupUrl, '#16a34a')}
+${ctaButton('Configurar junto com o time →', whatsappSetupUrl, '#146C43')}
 
 <p style="margin:24px 0 16px;">Ou, se quiser começar por conta:</p>
 
@@ -167,15 +170,15 @@ export function emailDay2(nome) {
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Oi Vinicius! Criei minha conta no Zelo PDV mas estou com dúvidas para começar. Pode me ajudar?`)}`;
 
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Você já registrou sua primeira venda? 🛒</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#011F4A;">Você já registrou sua primeira venda? 🛒</p>
 
 <p style="margin:0 0 16px;">Oi! Vi que ${loja ? `a conta da <strong>${loja}</strong> foi criada` : 'você criou sua conta'} no Zelo PDV há alguns dias.</p>
 
 <p style="margin:0 0 16px;">A primeira venda é sempre um marco — e quero saber se você já chegou lá. Se ainda não registrou nada, é bem rápido:</p>
 
-<ol style="margin:0 0 16px;padding-left:24px;color:#374151;">
-  <li style="margin-bottom:8px;">Entre em <a href="${APP_URL}/gestao/produtos" style="color:#1d4ed8;">Gestão → Produtos</a> e cadastre 2 ou 3 itens</li>
-  <li style="margin-bottom:8px;">Vá em <a href="${APP_URL}/app" style="color:#1d4ed8;">PDV</a> e selecione os produtos</li>
+<ol style="margin:0 0 16px;padding-left:24px;color:#34455F;">
+  <li style="margin-bottom:8px;">Entre em <a href="${APP_URL}/gestao/produtos" style="color:#011F4A;">Gestão → Produtos</a> e cadastre 2 ou 3 itens</li>
+  <li style="margin-bottom:8px;">Vá em <a href="${APP_URL}/app" style="color:#011F4A;">PDV</a> e selecione os produtos</li>
   <li style="margin-bottom:8px;">Finalize com qualquer forma de pagamento</li>
 </ol>
 
@@ -183,7 +186,7 @@ export function emailDay2(nome) {
 
 ${ctaButton('Ir para o PDV →', `${APP_URL}/app`)}
 
-${signature(`<br /><a href="${whatsappUrl}" style="color:#1d4ed8;">Me chame no WhatsApp se travar em algo</a>`)}
+${signature(`<br /><a href="${whatsappUrl}" style="color:#011F4A;">Me chame no WhatsApp se travar em algo</a>`)}
 `);
 
   return {
@@ -206,7 +209,7 @@ export function emailDay5(nome) {
   const whatsappCallUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${callMsg}`;
 
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Quer que a gente configure o Zelo com você? 🤝</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#011F4A;">Quer que a gente configure o Zelo com você? 🤝</p>
 
 <p style="margin:0 0 16px;">Oi! ${loja ? `A <strong>${loja}</strong> começou o teste` : 'Você começou o teste'} faz alguns dias, e eu queria repetir uma oferta que fiz lá no começo, porque quase ninguém aceita de primeira.</p>
 
@@ -214,7 +217,7 @@ export function emailDay5(nome) {
 
 <p style="margin:0 0 16px;">Nesses 15 minutos a gente:</p>
 
-<ul style="margin:0 0 16px;padding-left:24px;color:#374151;">
+<ul style="margin:0 0 16px;padding-left:24px;color:#34455F;">
   <li style="margin-bottom:8px;">Cadastra seus produtos e categorias junto com você</li>
   <li style="margin-bottom:8px;">Deixa o estoque e os preços prontos pra usar no balcão</li>
   <li style="margin-bottom:8px;">Mostra o fechamento de caixa e o relatório de lucro real</li>
@@ -223,7 +226,7 @@ export function emailDay5(nome) {
 
 <p style="margin:0 0 16px;">Não custa nada e não tem compromisso nenhum de assinar depois. A ideia é você passar o resto do teste usando o sistema de verdade, com tudo já cadastrado, e aí decidir com conhecimento de causa.</p>
 
-${ctaButton('Marcar os 15 minutos →', whatsappCallUrl, '#16a34a')}
+${ctaButton('Marcar os 15 minutos →', whatsappCallUrl, '#146C43')}
 
 ${signature()}
 `);
@@ -252,11 +255,11 @@ function blocoExtensao({ titulo, preco, paraQuem, descricao, url }) {
   return `
 <table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 12px;border-collapse:collapse;">
   <tr>
-    <td style="padding:16px 18px;border:1px solid #e5e7eb;border-radius:8px;background-color:#ffffff;">
-      <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#111827;">${titulo} <span style="font-weight:400;color:#6b7280;font-size:14px;">${preco}</span></p>
-      <p style="margin:0 0 8px;font-size:13px;color:#1d4ed8;font-weight:600;">${paraQuem}</p>
-      <p style="margin:0 0 10px;font-size:14px;color:#374151;line-height:1.6;">${descricao}</p>
-      <a href="${url}" style="font-size:14px;color:#1d4ed8;font-weight:600;text-decoration:none;">Ver detalhes &rarr;</a>
+    <td style="padding:16px 18px;border:1px solid #E5E2DC;border-radius:8px;background-color:#ffffff;">
+      <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#011F4A;">${titulo} <span style="font-weight:400;color:#5E6C80;font-size:14px;">${preco}</span></p>
+      <p style="margin:0 0 8px;font-size:13px;color:#011F4A;font-weight:600;">${paraQuem}</p>
+      <p style="margin:0 0 10px;font-size:14px;color:#34455F;line-height:1.6;">${descricao}</p>
+      <a href="${url}" style="font-size:14px;color:#011F4A;font-weight:600;text-decoration:none;">Ver detalhes &rarr;</a>
     </td>
   </tr>
 </table>`;
@@ -338,7 +341,7 @@ export function emailDay9(nome, ctx = {}) {
   blocos.sort((a, b) => a.peso - b.peso);
 
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Tem peça extra que talvez encaixe no seu negócio 🧩</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#011F4A;">Tem peça extra que talvez encaixe no seu negócio 🧩</p>
 
 <p style="margin:0 0 16px;">${loja ? `A <strong>${loja}</strong> já está usando` : 'Você já está usando'} o Zelo de verdade, então vale conhecer o que dá pra plugar em cima do plano base. Não precisa de nada disso pra operar, e nenhuma é obrigatória.</p>
 
@@ -367,13 +370,13 @@ export function emailDay11(nome) {
   const loja = lojaLabel(nome);
 
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Você já viu o relatório financeiro do Zelo? 📊</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#011F4A;">Você já viu o relatório financeiro do Zelo? 📊</p>
 
 <p style="margin:0 0 16px;">Oi! Existe uma funcionalidade que a maioria dos usuários descobre só depois de algumas semanas, e eu quero te mostrar agora.</p>
 
 <p style="margin:0 0 16px;">É o <strong>Relatório Financeiro</strong>. Ele te mostra:</p>
 
-<ul style="margin:0 0 16px;padding-left:24px;color:#374151;">
+<ul style="margin:0 0 16px;padding-left:24px;color:#34455F;">
   <li style="margin-bottom:8px;"><strong>Faturamento por período</strong> — quanto entrou de verdade</li>
   <li style="margin-bottom:8px;"><strong>Lucro real</strong> — faturamento menos despesas cadastradas</li>
   <li style="margin-bottom:8px;"><strong>Forma de pagamento</strong> — quanto veio de PIX, dinheiro, cartão, fiado</li>
@@ -402,7 +405,7 @@ export function emailDay13(nome) {
   const loja = lojaLabel(nome);
 
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#dc2626;">⚠️ Último aviso: seu trial encerra amanhã</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#B42318;">⚠️ Último aviso: seu trial encerra amanhã</p>
 
 <p style="margin:0 0 16px;">Amanhã o período de teste ${loja ? `da <strong>${loja}</strong> ` : ''}no Zelo PDV encerra.</p>
 
@@ -412,9 +415,9 @@ export function emailDay13(nome) {
 
 <p style="margin:0 0 16px;">Você pode cancelar quando quiser. Sem fidelidade, sem multa.</p>
 
-${ctaButton('Assinar agora e não perder acesso →', `${APP_URL}/assinatura`, '#dc2626')}
+${ctaButton('Assinar agora e não perder acesso →', `${APP_URL}/assinatura`, '#B42318')}
 
-<p style="margin:24px 0 0;color:#6b7280;font-size:13px;">Se decidir não continuar, não tem problema. Mas se mudar de ideia depois, todos os seus dados estarão preservados por 30 dias após o encerramento.</p>
+<p style="margin:24px 0 0;color:#5E6C80;font-size:13px;">Se decidir não continuar, não tem problema. Mas se mudar de ideia depois, todos os seus dados estarão preservados por 30 dias após o encerramento.</p>
 
 ${signature()}
 `);
@@ -430,7 +433,7 @@ ${signature()}
 // ---------------------------------------------------------------------------
 export function emailNudgeCompleteProfile(email) {
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Você criou uma conta no Zelo PDV — mas não terminou o cadastro 👀</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#011F4A;">Você criou uma conta no Zelo PDV — mas não terminou o cadastro 👀</p>
 
 <p style="margin:0 0 16px;">Oi! Vi aqui que você criou sua conta, mas ainda não configurou o perfil da sua empresa. Isso leva menos de 2 minutos e é o único passo que falta para ativar seu <strong>teste gratuito de ${TRIAL_DAYS} dias</strong>.</p>
 
@@ -458,7 +461,7 @@ export function emailAccessControlInvite({ companyName, roleName, inviteUrl }) {
   const safeInviteUrl = escapeHtml(inviteUrl);
 
   const html = wrapEmail(`
-<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;">Seu acesso ao Zelo PDV foi liberado</p>
+<p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#011F4A;">Seu acesso ao Zelo PDV foi liberado</p>
 
 <p style="margin:0 0 16px;">Você recebeu um convite para entrar na operação da <strong>${safeCompanyName}</strong> no Zelo PDV.</p>
 
@@ -470,9 +473,9 @@ ${safeRoleName
 
 ${ctaButton('Aceitar convite e criar senha →', safeInviteUrl)}
 
-<p style="margin:24px 0 8px;color:#6b7280;font-size:13px;">Se o botão não abrir, use este link direto:</p>
+<p style="margin:24px 0 8px;color:#5E6C80;font-size:13px;">Se o botão não abrir, use este link direto:</p>
 <p style="margin:0 0 16px;font-size:13px;line-height:1.7;word-break:break-all;">
-  <a href="${safeInviteUrl}" style="color:#1d4ed8;">${safeInviteUrl}</a>
+  <a href="${safeInviteUrl}" style="color:#011F4A;">${safeInviteUrl}</a>
 </p>
 
 <p style="margin:0 0 16px;">Depois da confirmação, você poderá entrar normalmente no sistema com este mesmo e-mail.</p>
