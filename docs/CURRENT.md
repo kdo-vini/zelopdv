@@ -73,6 +73,14 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     alertas, atividade com "ver itens", menu reimprimir/excluir e sheet de
     exclusão, checklist de configuração e atalhos. Tudo com os mesmos
     handlers do legado. Harness ganhou `DASH=1` e cliques em `menuitem`.
+  - **Fase 4 — Gestão / Produtos** (hotspot): restilo só por CSS escopado em
+    `[data-surface="app"]`, com o mesmo markup e todas as funções (árvore com
+    edição inline, filtros, ordenar, seleção/exclusão em massa, edição inline,
+    menus, paginação, modais, FAB mobile). Categorias e tabela em cartões
+    separados, linhas de 56px, preço em Mono, interruptor "Ativo" com mola.
+    Corrigido o "Todos os produtos" invisível (herdava o item ativo da
+    sidebar navy). As abas de filtro do mockup ficaram no dropdown atual
+    porque "Ativos" não existe como filtro hoje (seria lógica nova).
   - Dono aprovou o visual interno (2026-09-26). **Por último:** refazer as
     capturas da landing (hero, "Vendeu bem…", cards, `PhoneShot`) com a UI nova.
 

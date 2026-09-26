@@ -4009,4 +4009,153 @@
       transition: none;
     }
   }
+
+  /* ═══ Zelo Design System (only under [data-surface="app"]; mockup 03 · Produtos) ═══
+     Same markup and handlers as legacy: this block only restyles it. Tokens only. */
+  /* the page reuses the sidebar's item colors; the app sidebar is navy, so point them at paper tones here */
+  :global([data-surface="app"]) .page-header,
+  :global([data-surface="app"]) .split-view,
+  :global([data-surface="app"]) .mobile-create-menu {
+    --sidebar-item-active-bg: var(--bg-sunken);
+    --sidebar-item-active-text: var(--text-main);
+    --sidebar-item-hover-bg: var(--bg-sunken);
+    font-family: var(--zelo-font-ui);
+  }
+  :global([data-surface="app"]) .page-header { margin-bottom: 1rem; }
+  :global([data-surface="app"]) .page-title-block p { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  :global([data-surface="app"]) .page-title-block h1 { margin-top: 6px; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  :global([data-surface="app"]) .btn-primary,
+  :global([data-surface="app"]) .btn-secondary {
+    height: 40px; padding: 0 16px; gap: 8px; border-radius: var(--zelo-radius-control); font: var(--type-label); font-weight: 600;
+    transition: background var(--zelo-dur-fast), border-color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+  :global([data-surface="app"]) .btn-secondary { background: var(--bg-panel); color: var(--text-main); }
+  :global([data-surface="app"]) .btn-secondary:hover { background: var(--bg-panel); border-color: var(--border-strong); }
+  :global([data-surface="app"]) .btn-primary:active,
+  :global([data-surface="app"]) .btn-secondary:active,
+  :global([data-surface="app"]) .page-btn:active:not(:disabled),
+  :global([data-surface="app"]) .mobile-category-chip:active,
+  :global([data-surface="app"]) .mobile-subcategory-chip:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+  :global([data-surface="app"]) .desktop-actions-popover,
+  :global([data-surface="app"]) .sort-dropdown,
+  :global([data-surface="app"]) .filter-dropdown,
+  :global([data-surface="app"]) .product-menu-popover {
+    padding: 6px; border-radius: var(--zelo-radius-control); border-color: var(--border-card); background: var(--bg-panel); box-shadow: var(--elevation-float);
+  }
+  :global([data-surface="app"]) .desktop-action-item,
+  :global([data-surface="app"]) .sort-option,
+  :global([data-surface="app"]) .product-menu-item { min-height: 38px; padding: 0 10px; border-radius: 8px; font: var(--type-label); color: var(--text-main); }
+  :global([data-surface="app"]) .product-menu-item.product-menu-danger { color: var(--status-error-text); }
+  :global([data-surface="app"]) .product-menu-item.product-menu-danger:hover { background: var(--status-error-bg); }
+
+  /* two cards side by side, like the mockup */
+  :global([data-surface="app"]) .split-view { gap: 16px; border: 0; border-radius: 0; overflow: visible; }
+  :global([data-surface="app"]) .tree-panel,
+  :global([data-surface="app"]) .products-panel { border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); overflow: hidden; }
+  :global([data-surface="app"]) .tree-panel { width: 232px; }
+  :global([data-surface="app"]) .products-table { min-width: 840px; }
+  :global([data-surface="app"]) .tree-header { padding: 12px 12px 12px 16px; border-color: var(--border-subtle); }
+  :global([data-surface="app"]) .tree-heading > span:first-child { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  :global([data-surface="app"]) .badge-count { border: 0; background: var(--bg-sunken); font: var(--type-caption); font-family: var(--zelo-font-num); font-weight: 500; color: var(--text-muted); }
+  :global([data-surface="app"]) .tree-add-btn,
+  :global([data-surface="app"]) .view-toggle { width: 36px; height: 36px; border-color: var(--border-card); border-radius: 10px; }
+  :global([data-surface="app"]) .tree-add-btn:hover,
+  :global([data-surface="app"]) .view-toggle:not(:disabled):hover { background: var(--bg-panel); border-color: var(--border-strong); }
+  :global([data-surface="app"]) .tree-list { padding: 6px 8px 12px; }
+  :global([data-surface="app"]) .tree-item { min-height: 38px; padding: 0 8px; border-radius: 10px; color: var(--text-label); }
+  :global([data-surface="app"]) .tree-item :global(.text-sm) { font: var(--type-label); }
+  :global([data-surface="app"]) .tree-item.tree-item-active { color: var(--text-main); }
+  :global([data-surface="app"]) .subcat-badge { font-family: var(--zelo-font-num); }
+  :global([data-surface="app"]) .tree-edit-form { border-radius: var(--zelo-radius-control); }
+  :global([data-surface="app"]) .tree-input { border-radius: 8px; }
+
+  /* toolbar */
+  :global([data-surface="app"]) .products-toolbar { padding: 10px 16px; background: var(--bg-panel); }
+  :global([data-surface="app"]) .search-wrapper { height: 40px; padding: 0 12px; border-color: var(--border-card); border-radius: var(--zelo-radius-control); background: var(--bg-panel); }
+  :global([data-surface="app"]) .search-wrapper:focus-within { border-color: var(--border-strong); box-shadow: 0 0 0 4px var(--focus); }
+  :global([data-surface="app"]) .search-input { width: 280px; height: 100%; border: 0; outline: 0; box-shadow: none; padding: 0; font: var(--type-body); }
+  :global([data-surface="app"]) .filter-btn,
+  :global([data-surface="app"]) .sort-btn { min-width: 40px; min-height: 40px; height: 40px; border-radius: var(--zelo-radius-control); font: var(--type-label); font-weight: 600; }
+  :global([data-surface="app"]) .sort-btn { padding: 0 12px; border-color: var(--border-card); color: var(--text-main); }
+  :global([data-surface="app"]) .sort-btn:hover,
+  :global([data-surface="app"]) .sort-btn[aria-expanded="true"] { background: var(--bg-panel); border-color: var(--border-strong); }
+  :global([data-surface="app"]) .bulk-action-btn { height: 36px; border-radius: 10px; font: var(--type-label); }
+
+  /* table: compact rows, mono numbers */
+  :global([data-surface="app"]) .th-cell { padding: 10px 16px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  :global([data-surface="app"]) .td-cell { padding: 6px 16px; height: 56px; font: var(--type-body); color: var(--text-label); }
+  :global([data-surface="app"]) .product-name-cell :global(span) { font: var(--type-body-strong); }
+  :global([data-surface="app"]) .products-table :global(td.font-mono) { font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; color: var(--text-main); }
+  :global([data-surface="app"]) .product-row:hover { background: color-mix(in srgb, var(--bg-sunken) 55%, transparent); }
+  :global([data-surface="app"]) .stock-value { font-family: var(--zelo-font-num); color: var(--text-main); }
+  :global([data-surface="app"]) .stock-value.stock-low { color: var(--status-warning-text); font-weight: 600; }
+  :global([data-surface="app"]) .complements-link { font: var(--type-label); color: var(--text-main); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+  :global([data-surface="app"]) .row-action-btn { border-radius: 9px; color: var(--text-muted); }
+  :global([data-surface="app"]) .row-action-btn:hover { color: var(--text-main); }
+  @media (min-width: 641px) {
+    :global([data-surface="app"]) .complements-link,
+    :global([data-surface="app"]) .status-toggle,
+    :global([data-surface="app"]) .row-action-btn { min-height: 36px; }
+    :global([data-surface="app"]) .row-action-btn { min-width: 36px; }
+  }
+
+  /* Ativo switch: white thumb on a spring */
+  :global([data-surface="app"]) .status-toggle { gap: 10px; font: var(--type-label); color: var(--text-label); }
+  :global([data-surface="app"]) .status-toggle-track { width: 36px; height: 22px; padding: 2px; background: var(--border-strong); }
+  :global([data-surface="app"]) .status-toggle-thumb {
+    width: 18px; height: 18px; background: var(--bg-panel); box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 40%, transparent);
+    transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+  :global([data-surface="app"]) .status-toggle.is-active .status-toggle-track { background: var(--primary); }
+  :global([data-surface="app"]) .status-toggle.is-active .status-toggle-thumb { transform: translateX(14px); }
+  :global([data-surface="app"]) .status-toggle:active .status-toggle-thumb { width: 22px; }
+  :global([data-surface="app"]) .status-toggle.is-active:active .status-toggle-thumb { transform: translateX(10px); }
+
+  /* pagination on one line */
+  :global([data-surface="app"]) .pagination { padding: 10px 16px; border-color: var(--border-subtle); }
+  :global([data-surface="app"]) .pagination-summary,
+  :global([data-surface="app"]) .page-size-control { font: var(--type-caption); }
+  :global([data-surface="app"]) .page-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; white-space: nowrap; border-color: var(--border-card); border-radius: 10px; background: var(--bg-panel); color: var(--text-main); font: var(--type-label); }
+  :global([data-surface="app"]) .page-btn:hover:not(:disabled) { background: var(--bg-panel); border-color: var(--border-strong); }
+  :global([data-surface="app"]) .page-number { min-width: 36px; min-height: 36px; border-radius: 10px; font: var(--type-num-sm); }
+  :global([data-surface="app"] .page-size-select) { min-height: 36px; border-color: var(--border-card); border-radius: 10px; background: var(--bg-panel); color: var(--text-main); }
+
+  /* category / subcategory dialogs */
+  :global([data-surface="app"]) .modal-backdrop { background: color-mix(in srgb, var(--shadow-color) 42%, transparent); }
+  :global([data-surface="app"]) .modal-box { border-color: var(--border-card); border-radius: var(--zelo-radius-sheet); background: var(--bg-panel); }
+  :global([data-surface="app"]) .modal-header { padding: 18px 22px; border-color: var(--border-subtle); }
+  :global([data-surface="app"]) .modal-title { font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
+  :global([data-surface="app"]) .modal-body { padding: 20px 22px; }
+  :global([data-surface="app"]) .modal-close { width: 36px; height: 36px; border-radius: 10px; color: var(--text-muted); }
+
+  /* mobile: lighter cards, mono price */
+  @media (max-width: 640px) {
+    :global([data-surface="app"]) .split-view { gap: 12px; }
+    :global([data-surface="app"]) .tree-panel,
+    :global([data-surface="app"]) .products-panel { border: 0; border-radius: 0; background: transparent; overflow: visible; }
+    :global([data-surface="app"]) .products-toolbar,
+    :global([data-surface="app"]) .mobile-products-list,
+    :global([data-surface="app"]) .products-table-shell,
+    :global([data-surface="app"]) .pagination { background: transparent; }
+    :global([data-surface="app"]) .products-toolbar { padding: 0; border: 0; }
+    :global([data-surface="app"]) .mobile-products-list { padding: 12px 0; gap: 8px; }
+    :global([data-surface="app"]) .search-wrapper { height: 48px; padding-right: 7rem; }
+    :global([data-surface="app"]) .search-input { width: 100%; font-size: 16px; }
+    :global([data-surface="app"]) .toolbar-controls .filter-btn,
+    :global([data-surface="app"]) .toolbar-controls .sort-btn { height: 48px; width: 44px; border-color: var(--border-subtle); }
+    :global([data-surface="app"]) .mobile-product-card { padding: 12px 14px; border-color: var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+    :global([data-surface="app"]) .mobile-product-title-row h2 { font: var(--type-body-strong); }
+    :global([data-surface="app"]) .mobile-product-category { padding: 0; background: transparent; font: var(--type-caption); color: var(--text-muted); }
+    :global([data-surface="app"]) .mobile-card-divider { margin: 10px 0; }
+    :global([data-surface="app"]) .mobile-product-details { gap: 6px 16px; }
+    :global([data-surface="app"]) .mobile-detail-label { font: var(--type-caption); }
+    :global([data-surface="app"]) .mobile-detail-value { font: var(--type-body); }
+    :global([data-surface="app"]) .mobile-price { font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; color: var(--text-main); }
+    :global([data-surface="app"]) .mobile-category-chip,
+    :global([data-surface="app"]) .mobile-subcategory-chip { min-height: 40px; border-color: var(--border-card); background: var(--bg-panel); color: var(--text-label); font: var(--type-label); transition: background var(--zelo-dur-fast), color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+    :global([data-surface="app"]) .mobile-category-chip.active,
+    :global([data-surface="app"]) .mobile-subcategory-chip.active { border-color: var(--primary); background: var(--primary); color: var(--primary-text); }
+    :global([data-surface="app"]) .category-count { font-family: var(--zelo-font-num); background: var(--bg-sunken); }
+    :global([data-surface="app"]) .modal-box { border-radius: var(--zelo-radius-sheet); }
+  }
 </style>
