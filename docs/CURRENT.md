@@ -81,6 +81,17 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     Corrigido o "Todos os produtos" invisível (herdava o item ativo da
     sidebar navy). As abas de filtro do mockup ficaram no dropdown atual
     porque "Ativos" não existe como filtro hoje (seria lógica nova).
+  - **Fase 4 — Gestão / listas** (Pessoas, Estoque, Despesas, Fichário,
+    cadastro de Mesas): CSS escopado em `[data-surface="app"]` sobre o markup
+    atual; filtro de tipo em segmentado, tabelas em cartão, valores em Mono,
+    saldo do Fichário contando (`MoneyText animate`). `app.css` ganhou o
+    cabeçalho interno (eyebrow + título Mono) para as 18 telas com o mesmo
+    par e aponta `--sidebar-item-*` para tons de papel dentro de `main` e
+    diálogos (hovers sumiam). No tema novo também corrige, sem tocar o
+    legado: capacidade invisível no cadastro de Mesas no celular (o CSS lê
+    `attr(data-cap)`, que o markup nunca define), datas estourando e campo
+    "Descrição" deslocado em Despesas, ícones esmagados em Pessoas.
+    Harness: `LISTS=1` e `EVAL`.
   - Dono aprovou o visual interno (2026-09-26). **Por último:** refazer as
     capturas da landing (hero, "Vendeu bem…", cards, `PhoneShot`) com a UI nova.
 

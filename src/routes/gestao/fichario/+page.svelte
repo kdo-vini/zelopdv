@@ -9,6 +9,8 @@
   import { buildFiadoStatement, getFiadoState } from '$lib/finance/fiado';
   import { buildFiadoPaymentWhatsAppUrl } from '$lib/finance/fiadoWhatsApp';
   import { normalizeBrazilianPhone } from '$lib/masks';
+  import { zeloSurface } from '$lib/theme/surface';
+  import { MoneyText } from '$lib/components/zelo';
 
   let pessoas = [];
   let pessoaSelecionada = null;
@@ -529,7 +531,7 @@
             <div class="hero-top">
               <span class="hero-label">Saldo em fiado</span>
             </div>
-            <output class="hero-balance {estadoAtual.key}">{money(estadoAtual.value)}</output>
+            <output class="hero-balance {estadoAtual.key}">{#if $zeloSurface}<MoneyText value={estadoAtual.value} size="lg" animate class="zf-hero" />{:else}{money(estadoAtual.value)}{/if}</output>
             <div class="hero-actions">
               {#if !paymentConfirmation && (isMobileViewport() || !showPaymentForm)}
                 <button class="hero-btn-secondary" on:click={togglePaymentForm}>
@@ -1447,4 +1449,21 @@ Regularize quando puder!</div>
       max-width: 420px;
     }
   }
+
+  /* ═══ Zelo Design System (only under [data-surface="app"]; mockup 03 · listas) — same markup, tokens only ═══ */
+  :global([data-surface="app"]) .fichario-page { font-family: var(--zelo-font-ui); }
+  :global([data-surface="app"]) .page-path,
+  :global([data-surface="app"]) .section-label,
+  :global([data-surface="app"]) .people-count { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  :global([data-surface="app"]) .page-header h1 { font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  :global([data-surface="app"]) .people-panel { border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+  :global([data-surface="app"]) .person-balance,
+  :global([data-surface="app"]) .entry-values { font-family: var(--zelo-font-num); }
+  :global([data-surface="app"]) .entry-values strong { font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; }
+  :global([data-surface="app"]) .hero-balance :global(.zf-hero) { font-size: 2.25rem; }
+  :global([data-surface="app"]) .hero-balance :global(.zf-hero small) { color: inherit; opacity: 0.6; }
+  :global([data-surface="app"]) .secondary-action,
+  :global([data-surface="app"]) .icon-action { transition: background var(--zelo-dur-fast), border-color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  :global([data-surface="app"]) .secondary-action:active,
+  :global([data-surface="app"]) .icon-action:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
 </style>

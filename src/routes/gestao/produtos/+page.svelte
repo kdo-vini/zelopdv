@@ -4012,18 +4012,11 @@
 
   /* ═══ Zelo Design System (only under [data-surface="app"]; mockup 03 · Produtos) ═══
      Same markup and handlers as legacy: this block only restyles it. Tokens only. */
-  /* the page reuses the sidebar's item colors; the app sidebar is navy, so point them at paper tones here */
+  /* --sidebar-item-* and the page title are handled app-wide in app.css */
   :global([data-surface="app"]) .page-header,
   :global([data-surface="app"]) .split-view,
-  :global([data-surface="app"]) .mobile-create-menu {
-    --sidebar-item-active-bg: var(--bg-sunken);
-    --sidebar-item-active-text: var(--text-main);
-    --sidebar-item-hover-bg: var(--bg-sunken);
-    font-family: var(--zelo-font-ui);
-  }
+  :global([data-surface="app"]) .mobile-create-menu { font-family: var(--zelo-font-ui); }
   :global([data-surface="app"]) .page-header { margin-bottom: 1rem; }
-  :global([data-surface="app"]) .page-title-block p { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
-  :global([data-surface="app"]) .page-title-block h1 { margin-top: 6px; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
   :global([data-surface="app"]) .btn-primary,
   :global([data-surface="app"]) .btn-secondary {
     height: 40px; padding: 0 16px; gap: 8px; border-radius: var(--zelo-radius-control); font: var(--type-label); font-weight: 600;

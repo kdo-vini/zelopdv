@@ -547,4 +547,29 @@
   :global(html.light) .input-tiny {
     color-scheme: light;
   }
+
+  /* ═══ Zelo Design System (only under [data-surface="app"]; mockup 03 · listas) — same markup, tokens only ═══ */
+  :global([data-surface="app"]) .input-tiny { min-width: 0; width: 100%; color-scheme: light; font: var(--type-num-sm); font-variant-numeric: tabular-nums; }
+  :global([data-surface="app"]) .rounded-lg { border-color: var(--border-card) !important; border-radius: var(--zelo-radius-card); }
+  :global([data-surface="app"]) .grid > div > p.uppercase { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  :global([data-surface="app"]) .grid > div > p.text-xl,
+  :global([data-surface="app"]) .grid > div > p.text-lg { margin-top: 6px; font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-variant-numeric: tabular-nums; color: var(--text-main) !important; }
+  @media (max-width: 1023px) {
+    /* the form stacks in a column with items-end; the description field has no w-full and shrinks to the right */
+    :global([data-surface="app"]) .items-end > .flex-1 { align-self: stretch; }
+  }
+  :global([data-surface="app"]) h3 { font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
+  :global([data-surface="app"]) th { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  :global([data-surface="app"]) tbody td { height: 56px; }
+  :global([data-surface="app"]) tbody td:first-child,
+  :global([data-surface="app"]) tbody td.text-right.font-bold { font-family: var(--zelo-font-num); font-variant-numeric: tabular-nums; }
+  :global([data-surface="app"]) tbody td.text-right.font-bold { font-weight: 600; color: var(--status-error-text) !important; }
+  /* category as a quiet tag, not a navy block */
+  :global([data-surface="app"]) tbody td span.uppercase { border-radius: 7px; padding: 2px 8px; background: var(--bg-sunken) !important; color: var(--text-label) !important; font: var(--type-caption); font-weight: 500; text-transform: none; }
+  :global([data-surface="app"]) tbody button { width: 36px; height: 36px; display: inline-grid; place-items: center; border-radius: 9px; }
+  :global([data-surface="app"]) header + div + div :global(.btn-primary) {
+    height: 40px; border-radius: var(--zelo-radius-control); font: var(--type-label); font-weight: 600;
+    transition: background var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+  :global([data-surface="app"]) header + div + div :global(.btn-primary:active:not(:disabled)) { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
 </style>

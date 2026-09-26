@@ -448,3 +448,23 @@
     </div>
   {/if}
 {/if}
+
+<style>
+  /* ═══ Zelo Design System (only under [data-surface="app"]; mockup 03 · listas) — same markup, tokens only ═══ */
+  :global([data-surface="app"]) .flex-wrap > input,
+  :global([data-surface="app"]) .flex-wrap > button { height: 40px; padding: 0 14px; border-radius: var(--zelo-radius-control); font: var(--type-body); }
+  :global([data-surface="app"]) .flex-wrap > button { font: var(--type-label); font-weight: 600; }
+  :global([data-surface="app"]) .overflow-x-auto { padding: 0 16px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+  :global([data-surface="app"]) th { height: 44px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  :global([data-surface="app"]) td { height: 56px; }
+  :global([data-surface="app"]) td .font-medium,
+  :global([data-surface="app"]) td .font-semibold { font: var(--type-body-strong); }
+  :global([data-surface="app"]) td input { height: 36px; padding: 0 10px; border-radius: 10px; font: var(--type-num-md); font-variant-numeric: tabular-nums; }
+  :global([data-surface="app"]) td button,
+  :global([data-surface="app"]) .flex-wrap > button {
+    transition: background var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+  :global([data-surface="app"]) td button { height: 36px; padding: 0 14px; border-radius: 10px; font: var(--type-label); font-weight: 600; }
+  :global([data-surface="app"]) td button:active:not(:disabled),
+  :global([data-surface="app"]) .flex-wrap > button:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+</style>

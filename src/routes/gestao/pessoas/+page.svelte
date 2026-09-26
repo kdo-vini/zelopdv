@@ -812,4 +812,42 @@
       transition: none;
     }
   }
+
+  /* ═══ Zelo Design System (only under [data-surface="app"]; mockup 03 · listas) — same markup, tokens only ═══ */
+  :global([data-surface="app"]) .page { font-family: var(--zelo-font-ui); }
+  :global([data-surface="app"]) .page-header { margin-bottom: 1rem; }
+  :global([data-surface="app"]) .count-label { font: var(--type-caption); font-family: var(--zelo-font-num); }
+  :global([data-surface="app"]) .btn-primary {
+    min-height: 40px; padding: 0 16px; gap: 8px; border-radius: var(--zelo-radius-control); font: var(--type-label); font-weight: 600;
+    transition: background var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+  :global([data-surface="app"]) .btn-primary:active,
+  :global([data-surface="app"]) .type-chip:active,
+  :global([data-surface="app"]) .card-action:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+  :global([data-surface="app"]) .search-wrapper { height: 44px; padding: 0 14px; border-color: var(--border-card); border-radius: var(--zelo-radius-control); background: var(--bg-panel); }
+  :global([data-surface="app"]) .search-wrapper:focus-within { border-color: var(--border-strong); box-shadow: 0 0 0 4px var(--focus); }
+  :global([data-surface="app"]) .search-input { height: 100%; padding: 0; border: 0; box-shadow: none; background: transparent; font: var(--type-body); }
+  /* type filter as a segmented control */
+  :global([data-surface="app"]) .type-filters { gap: 2px; padding: 3px; border-radius: var(--zelo-radius-seg); background: var(--bg-sunken); }
+  :global([data-surface="app"]) .type-chip {
+    min-height: 38px; padding: 0 14px; border: 0; border-radius: calc(var(--zelo-radius-seg) - 3px); background: transparent; color: var(--text-label); font: var(--type-label);
+    transition: background var(--zelo-dur-base) var(--zelo-ease-out), color var(--zelo-dur-fast), box-shadow var(--zelo-dur-base), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+  :global([data-surface="app"]) .type-chip:hover { background: transparent; color: var(--text-main); }
+  :global([data-surface="app"]) .type-chip.active { background: var(--bg-panel); color: var(--text-main); font-weight: 600; box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow-color) 22%, transparent); }
+  :global([data-surface="app"]) .list-shell { border-color: var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+  :global([data-surface="app"]) .col-header { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  :global([data-surface="app"]) .desktop-table :global(td) { height: 56px; }
+  :global([data-surface="app"]) .desktop-table :global(td.tabular-nums),
+  :global([data-surface="app"]) .meta-value.tabular-nums { font-family: var(--zelo-font-num); }
+  :global([data-surface="app"]) .type-badge { border: 0; border-radius: 7px; padding: 2px 8px; background: var(--bg-sunken); color: var(--text-label); font: var(--type-caption); font-weight: 500; letter-spacing: 0; text-transform: none; }
+  :global([data-surface="app"]) .fiado-label { font: var(--type-caption); }
+  :global([data-surface="app"]) [class*="fiado-"] > span:last-child,
+  :global([data-surface="app"]) .meta-value[class*="fiado-"] { font-family: var(--zelo-font-num); font-weight: 600; }
+  :global([data-surface="app"]) .icon-btn { width: 36px; height: 36px; border-radius: 9px; }
+  :global([data-surface="app"]) .person-card { border-color: var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+  :global([data-surface="app"]) .person-card-title h2 { font: var(--type-body-strong); }
+  :global([data-surface="app"]) .card-action :global(svg) { flex-shrink: 0; }
+  :global([data-surface="app"]) .person-card-title .type-badge { align-self: flex-start; }
+  :global([data-surface="app"]) .card-action { border-radius: 10px; font: var(--type-label); transition: background var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
 </style>

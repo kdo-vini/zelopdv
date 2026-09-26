@@ -597,6 +597,22 @@
    `theme` and could never override the theme's :root --font-sans. Legacy is untouched. */
 [data-surface="brand"] { --font-sans: var(--zelo-font-ui); }
 
+/* Internal page header (Zelo Design System, Fase 4). Every internal screen opens with the same
+   pair: a Tailwind eyebrow `p.uppercase.tracking-[0.2em]` and an `h1.text-xl.tracking-tight`.
+   On the App surface they take the eyebrow and Mono title roles; legacy never has this attribute. */
+[data-surface="app"] p.uppercase.tracking-\[0\.2em\] { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); color: var(--text-muted); }
+[data-surface="app"] h1.text-xl.tracking-tight { font: var(--type-title); letter-spacing: var(--type-title-tracking); color: var(--text-main); }
+/* The --sidebar-item-* tokens are white washes for the navy sidebar, but page content and dialogs
+   reuse them for hover/active rows on paper, where they vanish. Point them at paper tones there. */
+[data-surface="app"] main,
+[data-surface="app"] dialog,
+[data-surface="app"] [role="dialog"] {
+  --sidebar-item-active-bg: var(--bg-sunken);
+  --sidebar-item-active-text: var(--text-main);
+  --sidebar-item-hover-bg: var(--bg-sunken);
+}
+
+
 /* Type roles (docs/DESIGN_SYSTEM.md → Tipografia): one role = one class. */
 @utility type-display { font: var(--type-display); letter-spacing: var(--type-display-tracking); }
 @utility type-title { font: var(--type-title); letter-spacing: var(--type-title-tracking); }

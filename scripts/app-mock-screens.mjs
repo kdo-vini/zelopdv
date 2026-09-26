@@ -71,6 +71,18 @@ const tables = {
       vendas_pagamentos: [],
     };
   })() : {}),
+  // LISTS=1: people, expenses and fiado entries for the /gestao list screens
+  ...(process.env.LISTS ? (() => {
+    const day = (d, h = 10) => new Date(new Date(new Date().setDate(d)).setHours(h, 0, 0, 0)).toISOString();
+    return {
+      pessoas: [['p1', 'Marina Souza', 'cliente', '11999990001', 86.5, 12, 3], ['p2', 'Carlos Lima', 'cliente', '11988882020', 0, null, null], ['p3', 'Beto', 'funcionario', '11977771212', 0, 28, 9], ['p4', 'Joana Reis', 'cliente', '11966663434', 24.9, null, null], ['p5', 'Seu Antônio', 'cliente', '', -10, 5, 1]]
+        .map(([id, nome, tipo, contato, saldo_fiado, aniversario_dia, aniversario_mes]) => ({ id, id_usuario: UID, nome, tipo, contato, saldo_fiado, aniversario_dia, aniversario_mes, aniversario_ano: null })),
+      expenses: [['e1', 'Pão e frios — Distribuidora Sol', 412.8, 'Fornecedor', 2], ['e2', 'Aluguel', 2400, 'Aluguel', 1], ['e3', 'Conta de luz', 386.45, 'Contas fixas', 1], ['e4', 'Gás', 128, 'Insumos', 1]]
+        .map(([id, description, amount, category, d]) => ({ id, user_id: UID, description, amount, category, date: day(d) })),
+      fiado_lancamentos: [['f1', 'p1', 'debito_venda', 59.8, 'Venda #1031', 1], ['f2', 'p1', 'pagamento', 20, 'Pix', 1], ['f3', 'p1', 'debito_venda', 46.7, 'Venda #1045', 1], ['f4', 'p4', 'debito_venda', 24.9, 'Venda #1049', 1]]
+        .map(([id, id_pessoa, natureza, valor, descricao, d], i) => ({ id, id_pessoa, natureza, valor, descricao, created_at: day(d, 9 + i), id_venda: null, id_caixa: null, id_caixa_movimentacao: null })),
+    };
+  })() : {}),
   access_users: [], categorias: process.env.EMPTY ? [] : cats, subcategorias: [], produtos: process.env.EMPTY ? [] : prods,
   caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date(new Date().setHours(8, 0, 0, 0)).toISOString(), data_fechamento: null, valor_inicial: 200 }],
 };
@@ -132,5 +144,6 @@ for (const step of (process.env.STEPS || '').split(',').filter(Boolean)) {
   }
   if (kind !== 'wait') await page.waitForTimeout(500);
 }
+if (process.env.EVAL) console.log('EVAL', JSON.stringify(await page.evaluate(process.env.EVAL)));
 await page.screenshot({ path: `${OUT}.png` });
 await browser.close();

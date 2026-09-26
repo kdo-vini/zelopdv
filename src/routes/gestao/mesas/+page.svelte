@@ -780,4 +780,30 @@
     }
     .icon-btn { width: 40px; height: 40px; }
   }
+
+  /* ═══ Zelo Design System (only under [data-surface="app"]; mockup 03 · listas) — same markup, tokens only ═══ */
+  :global([data-surface="app"]) .table-card { border-color: var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+  :global([data-surface="app"]) .mesas-table th { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  :global([data-surface="app"]) .mesas-table td { height: 60px; }
+  :global([data-surface="app"]) .num-pill { font: var(--type-num-md); letter-spacing: var(--type-num-md-tracking); font-variant-numeric: tabular-nums; border-radius: 10px; }
+  :global([data-surface="app"]) .cap-cell { font: var(--type-body); color: var(--text-label); }
+  :global([data-surface="app"]) .icon-btn { border-radius: 9px; transition: background var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  :global([data-surface="app"]) .icon-btn:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+  @media (max-width: 768px) {
+    /* main already pads 24px; the page's own 16px side padding doubles it and squeezes the table */
+    :global([data-surface="app"]) .page-shell { padding-left: 0; padding-right: 0; }
+    /* legacy hides the capacity text and reads attr(data-cap), which the markup never sets; show the text here */
+    :global([data-surface="app"]) .td-cap .cap-cell span { display: inline; }
+    :global([data-surface="app"]) .td-cap .cap-cell::after { content: none; }
+    :global([data-surface="app"]) .td-cap .cap-cell svg { display: none; }
+    :global([data-surface="app"]) .mesas-table th,
+    :global([data-surface="app"]) .mesas-table td { padding: 0.75rem 0.375rem; }
+    :global([data-surface="app"]) .mesas-table th:first-child,
+    :global([data-surface="app"]) .mesas-table td:first-child { padding-left: 0.75rem; }
+    :global([data-surface="app"]) .td-num,
+    :global([data-surface="app"]) .td-actions { width: auto; }
+    :global([data-surface="app"]) .num-pill { min-width: 36px; padding: 0.4rem 0.5rem; }
+    :global([data-surface="app"]) .status-pill .status-dot { display: none; }
+    :global([data-surface="app"]) .icon-btn { width: 36px; height: 36px; }
+  }
 </style>
