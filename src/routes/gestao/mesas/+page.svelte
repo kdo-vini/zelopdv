@@ -258,7 +258,7 @@
                   <span class="num-pill">{mesa.numero}</span>
                 </td>
                 <td class="td-cap">
-                  <span class="cap-cell">
+                  <span class="cap-cell" data-cap={mesa.capacidade == null ? '—' : `${mesa.capacidade} lug.`}>
                     <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm6 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM2 16.5a5 5 0 1 1 10 0v.5H2v-.5Zm11-.5a6.97 6.97 0 0 0-.79-3.21A4 4 0 0 1 18 16.5v.5h-5v-1Z"/>
                     </svg>
@@ -766,13 +766,25 @@
 
   /* === Mobile === */
   @media (max-width: 768px) {
-    .page-shell { padding: 1rem 1rem 1.25rem; }
+    /* main já aplica p-6; padding lateral extra aqui espremia a tabela */
+    .page-shell { padding: 1rem 0 1.25rem; }
     .page-header { flex-direction: column; }
     .header-actions { width: 100%; }
     .search-wrap { flex: 1; }
     .search-input { width: 100%; }
     .mesas-table th,
-    .mesas-table td { padding: 0.85rem 0.85rem; font-size: 0.85rem; }
+    .mesas-table td { padding: 0.75rem 0.4rem; font-size: 0.85rem; }
+    .mesas-table th:first-child,
+    .mesas-table td:first-child { padding-left: 0.75rem; }
+    .mesas-table th:last-child,
+    .mesas-table td:last-child { padding-right: 0.75rem; }
+    .td-num,
+    .td-actions { width: auto; }
+    .mesas-table th { font-size: 0.62rem; letter-spacing: 0.04em; }
+    .status-pill { padding: 0.3rem 0.55rem; }
+    .status-dot { display: none; }
+    .icon-btn + .icon-btn { margin-left: 0.15rem; }
+    .icon-btn:first-child { margin-left: 0; }
     .td-cap .cap-cell span { display: none; }
     .td-cap .cap-cell::after {
       content: attr(data-cap);
