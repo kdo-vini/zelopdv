@@ -14,6 +14,8 @@
   import { startOfflineRuntime, getOfflineContext, isOfflineWriteActive, submitOfflineOperation, offlineRequest, onOfflineChange, markOfflineReadiness, claimPrimaryDevice } from '$lib/offline/runtime';
   import { loadCashSnapshot } from '$lib/finance/offlineCash';
   import { listOperations, readSnapshot, saveSnapshot } from '$lib/offline/operations';
+  import MorphButton from '$lib/components/zelo/MorphButton.svelte';
+  import { zeloSurface } from '$lib/theme/surface.js';
 
   let loading = true;
   let errorMessage = '';
@@ -213,7 +215,7 @@
   }
 </script>
 
-<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4">
+<div class="mb-6 flex items-end justify-between border-b border-slate-700/60 pb-4" class:zelo-caixa-header={$zeloSurface}>
   <div>
     <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Financeiro / Fechar Caixa</p>
     <h1 class="text-xl font-bold text-slate-100 tracking-tight">Fechar Caixa</h1>
@@ -221,17 +223,17 @@
   </div>
 </div>
 {#if errorMessage}
-  <div class="mb-4 text-sm text-red-600">{errorMessage}</div>
+  <div class="mb-4 text-sm text-red-600" class:zelo-caixa-feedback={$zeloSurface}>{errorMessage}</div>
 {/if}
 
 {#if loading}
-  <div>Carregando...</div>
+  <div class:zelo-caixa-state={$zeloSurface}>Carregando...</div>
 {:else}
   {#if !caixa}
-    <div class="text-sm" style="color: var(--text-muted);">Nenhum caixa aberto encontrado para seu usuário.</div>
+    <div class="text-sm" class:zelo-caixa-state={$zeloSurface} style="color: var(--text-muted);">Nenhum caixa aberto encontrado para seu usuário.</div>
   {:else}
-    <section class="rounded-xl p-4 space-y-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
-      <div class="grid sm:grid-cols-2 gap-4">
+    <section class="rounded-xl p-4 space-y-4" class:zelo-caixa={$zeloSurface} style="background: var(--bg-card); border: 1px solid var(--border-card);">
+      <div class="grid sm:grid-cols-2 gap-4 caixa-meta">
         <div>
           <div class="text-sm" style="color: var(--text-muted);">Data de abertura</div>
           <div class="font-medium" style="color: var(--text-main);">{new Date(caixa.data_abertura).toLocaleString()}</div>
@@ -242,27 +244,27 @@
         </div>
       </div>
 
-      <div class="grid sm:grid-cols-5 gap-4">
-        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+      <div class="grid sm:grid-cols-5 gap-4 caixa-totals">
+        <div class="p-3 rounded-lg border caixa-metric">
           <div class="text-xs" style="color: var(--text-muted);">Dinheiro</div>
           <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.dinheiro).toFixed(2)}</div>
         </div>
-        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+        <div class="p-3 rounded-lg border caixa-metric">
           <div class="text-xs" style="color: var(--text-muted);">Cartão</div>
           <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totalCartao).toFixed(2)}</div>
           <div class="text-xs mt-1" style="color: var(--text-muted);">Débito R$ {Number(totais.cartao_debito).toFixed(2)} · Crédito R$ {Number(totais.cartao_credito).toFixed(2)}{totais.cartao_legacy>0?` · Outros R$ ${Number(totais.cartao_legacy).toFixed(2)}`:''}</div>
         </div>
-        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+        <div class="p-3 rounded-lg border caixa-metric">
           <div class="text-xs" style="color: var(--text-muted);">Pix</div>
           <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.pix).toFixed(2)}</div>
         </div>
-        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
+        <div class="p-3 rounded-lg border caixa-metric">
           <div class="text-xs" style="color: var(--text-muted);">{formatPaymentMethod('vale_refeicao')}</div>
           <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totais.vale_refeicao).toFixed(2)}</div>
         </div>
-        <div class="p-3 rounded-lg border" style="background: var(--bg-panel); border-color: var(--border-subtle);">
-          <div class="text-xs" style="color: var(--text-muted);">Total</div>
-          <div class="text-lg font-semibold" style="color: var(--text-main);">R$ {Number(totalGeral).toFixed(2)}</div>
+        <div class="p-3 rounded-lg border caixa-metric caixa-metric-total">
+          <div class="text-xs" style:color={$zeloSurface ? 'var(--primary-text)' : 'var(--text-muted)'}>Total</div>
+          <div class="text-lg font-semibold" style:color={$zeloSurface ? 'var(--primary-text)' : 'var(--text-main)'}>R$ {Number(totalGeral).toFixed(2)}</div>
         </div>
       </div>
 
@@ -326,7 +328,7 @@
         </div>
       {/if}
 
-      <div class="grid sm:grid-cols-3 gap-4 items-end">
+      <div class="grid sm:grid-cols-3 gap-4 items-end caixa-reconciliation">
         <div>
           <label for="valor-em-gaveta" class="block text-sm mb-1">Valor contado na gaveta</label>
           <input id="valor-em-gaveta" type="number" step="0.01" min="0" class="input-form" bind:value={valorEmGaveta} />
@@ -342,9 +344,13 @@
         </div>
       </div>
 
-      <div class="flex justify-end gap-2">
-  <a href="/app" class="btn-secondary">Voltar ao PDV</a>
-        <button class="btn-primary" disabled={fechando} on:click={fecharCaixa}>{fechando ? 'Fechando...' : 'Fechar Caixa'}</button>
+      <div class="flex justify-end gap-2 caixa-actions">
+        <a href="/app" class="btn-secondary">Voltar ao PDV</a>
+        {#if $zeloSurface}
+          <MorphButton state={fechando ? 'loading' : 'idle'} size="touch" loadingLabel="Fechando caixa…" onclick={fecharCaixa}>Fechar caixa</MorphButton>
+        {:else}
+          <button class="btn-primary" disabled={fechando} on:click={fecharCaixa}>{fechando ? 'Fechando...' : 'Fechar Caixa'}</button>
+        {/if}
       </div>
     </section>
   {/if}
@@ -361,4 +367,76 @@
   .fiado-summary li div strong { overflow: hidden; color: var(--text-main); font-size: .875rem; text-overflow: ellipsis; white-space: nowrap; }
   .fiado-summary li span { color: var(--text-muted); font-size: .875rem; }
   .fiado-summary li > strong { color: var(--status-warning-text); font-size: .875rem; font-variant-numeric: tabular-nums; }
+  .caixa-metric { background: var(--bg-panel); border-color: var(--border-subtle); }
+
+  .zelo-caixa-header { margin-bottom: 1.5rem; padding-bottom: 1rem; border-color: var(--border-subtle); }
+  .zelo-caixa-header p { margin-bottom: .375rem; color: var(--text-muted); font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); }
+  .zelo-caixa-header h1 { color: var(--text-main); font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+
+  .zelo-caixa-feedback,
+  .zelo-caixa-state { padding: 1rem; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-card); }
+  .zelo-caixa-feedback { border-color: var(--status-error-border); background: var(--status-error-bg); color: var(--status-error-text); }
+
+  .zelo-caixa {
+    padding: clamp(1rem, 2vw, 1.5rem);
+    border-radius: var(--zelo-radius-card);
+    box-shadow: var(--elevation-card);
+    animation: caixa-enter var(--zelo-dur-slow) var(--zelo-ease-spring) both;
+  }
+  .zelo-caixa .caixa-meta { padding-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); }
+  .zelo-caixa .caixa-meta > div > div:last-child,
+  .zelo-caixa .caixa-metric > div:nth-child(2),
+  .zelo-caixa .fiado-summary li > strong,
+  .zelo-caixa .caixa-reconciliation > div > div:nth-child(2) {
+    font: var(--type-num-md);
+    letter-spacing: var(--type-num-md-tracking);
+    font-variant-numeric: tabular-nums;
+  }
+  .zelo-caixa .caixa-totals { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .zelo-caixa .caixa-metric {
+    min-width: 0;
+    border-radius: var(--zelo-radius-card);
+    background: var(--bg-sunken);
+    transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring), border-color var(--zelo-dur-fast) var(--zelo-ease-out);
+  }
+  .zelo-caixa .caixa-metric:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+  .zelo-caixa .caixa-metric-total { background: var(--primary); border-color: var(--primary); }
+  .zelo-caixa .fiado-summary li { border-radius: var(--zelo-radius-control); background: var(--bg-sunken); }
+  .zelo-caixa .caixa-reconciliation { padding: 1rem; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-card); background: var(--bg-sunken); }
+  .zelo-caixa :global(.input-form) {
+    min-height: 48px;
+    border-radius: var(--zelo-radius-control);
+    background: var(--bg-input);
+    font: var(--type-num-md);
+    letter-spacing: var(--type-num-md-tracking);
+    font-variant-numeric: tabular-nums;
+  }
+  .zelo-caixa .caixa-actions { align-items: center; padding-top: .5rem; }
+  .zelo-caixa .caixa-actions :global(.mb) { min-width: 10rem; }
+  .zelo-caixa .caixa-actions .btn-secondary { min-height: 48px; border-radius: var(--zelo-radius-control); }
+
+  @keyframes caixa-enter {
+    from { opacity: 0; transform: translateY(12px) scale(.99); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @media (max-width: 900px) {
+    .zelo-caixa .caixa-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .zelo-caixa .caixa-metric-total { grid-column: 1 / -1; }
+  }
+
+  @media (max-width: 640px) {
+    .zelo-caixa-header { margin-bottom: 1rem; }
+    .zelo-caixa { padding: 1rem; margin-bottom: 5.5rem; }
+    .zelo-caixa .caixa-totals { grid-template-columns: 1fr; }
+    .zelo-caixa .caixa-metric-total { grid-column: auto; }
+    .zelo-caixa .caixa-actions { display: grid; grid-template-columns: 1fr; }
+    .zelo-caixa .caixa-actions :global(.mb),
+    .zelo-caixa .caixa-actions .btn-secondary { width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zelo-caixa,
+    .zelo-caixa .caixa-metric { animation: none; transition: none; }
+  }
 </style>
