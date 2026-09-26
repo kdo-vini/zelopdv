@@ -68,6 +68,11 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     blur e próxima etapa em MorphButton, logo do iFood na moldura redonda;
     cozinha clara com letra maior, âmbar a partir de 15 min e um botão
     "Marcar pedido pronto" (os "Marcar" por item chamavam a mesma função).
+  - **Fase 4 — Gestão / Dashboard** (mockup 03 aprovado): KPI de vendas em
+    destaque (conta ao abrir), ticket, caixa e estoque; vendas por hora,
+    alertas, atividade com "ver itens", menu reimprimir/excluir e sheet de
+    exclusão, checklist de configuração e atalhos. Tudo com os mesmos
+    handlers do legado. Harness ganhou `DASH=1` e cliques em `menuitem`.
   - Dono aprovou o visual interno (2026-09-26). **Por último:** refazer as
     capturas da landing (hero, "Vendeu bem…", cards, `PhoneShot`) com a UI nova.
 

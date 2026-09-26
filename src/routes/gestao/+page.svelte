@@ -9,6 +9,11 @@
   import { buildSaleReceiptPayload, loadSaleReceiptCompanyProfile } from '$lib/finance/saleReceipt';
   import { printVenda } from '$lib/printService';
   import { ArrowUpRight, MoreHorizontal, Printer, Trash2 } from 'lucide-svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import { rise } from '$lib/motion/transitions.js';
+  import { MoneyText } from '$lib/components/zelo';
+  import { Button } from '$lib/components/ui/button';
+  import { AlertTriangle, BarChart3, Package, RefreshCw, ShoppingBag, Users } from 'lucide-svelte';
 
 
   let loading = true;
@@ -304,6 +309,128 @@
 
 <svelte:window on:click={handleVendaMenuWindowClick} on:keydown={handleVendaMenuKeydown} />
 
+{#if $zeloSurface}
+<!-- Zelo Design System (mockup 03 aprovado). Same data, handlers and menus as the legacy branch below. -->
+<section class="zd">
+  <header class="zd-head">
+    <div>
+      <p class="zd-eyebrow">Gestão / Dashboard</p>
+      <h1 class="zd-title">Dashboard</h1>
+    </div>
+    <Button variant="outlined" size="md" onclick={loadDash}><RefreshCw strokeWidth={1.75} />Atualizar</Button>
+  </header>
+
+  {#if errorMsg}<p class="zd-err" role="alert">{errorMsg}</p>{/if}
+  {#if loading}
+    <p class="zd-muted">Carregando…</p>
+  {:else}
+    <div class="zd-kpis">
+      <div class="zd-kpi hero" title={caixaTooltip} class:help={!!caixaTooltip}>
+        <p class="zd-eyebrow">Vendas do caixa</p>
+        <MoneyText value={dash.vendas.totalHoje} size="lg" animate class="zd-hero-v" />
+        <p class="zd-cap">{dash.vendas.countHoje} {dash.vendas.countHoje === 1 ? 'cupom' : 'cupons'} no caixa atual</p>
+      </div>
+      <div class="zd-kpi">
+        <p class="zd-eyebrow">Ticket médio</p>
+        {#if dash.vendas.ticketMedioHoje}<MoneyText value={dash.vendas.ticketMedioHoje} size="md" animate />{:else}<p class="zd-kv">—</p>{/if}
+      </div>
+      <div class="zd-kpi" title={caixaTooltip} class:help={!!caixaTooltip}>
+        <p class="zd-eyebrow">Caixa</p>
+        <p class="zd-kv"><i class="zd-dot" class:on={dash.caixa.aberto} aria-hidden="true"></i>{dash.caixa.aberto ? 'Aberto' : 'Fechado'}</p>
+        <p class="zd-cap">{dash.caixa.aberto ? `${dash.caixa.horasAberto}h ativo` : 'Fechado'}</p>
+      </div>
+      <div class="zd-kpi">
+        <p class="zd-eyebrow">Estoque</p>
+        <p class="zd-kv" class:warn={dash.estoque.rupturas > 0 || dash.estoque.criticos > 0}>
+          {#if dash.estoque.rupturas > 0 || dash.estoque.criticos > 0}<AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />{/if}{dash.estoque.rupturas > 0 ? `${dash.estoque.rupturas} zerados` : 'Ok'}
+        </p>
+        <p class="zd-cap">{dash.estoque.criticos} {dash.estoque.criticos === 1 ? 'crítico' : 'críticos'}</p>
+      </div>
+    </div>
+
+    <div class="zd-grid">
+      <div class="zd-col">
+        {#if dash.vendasPorHora.length > 0}
+          <section class="zd-card zd-chart"><h2 class="zd-heading">Vendas por hora <span class="zd-cap">caixa atual</span></h2><BarChart data={dash.vendasPorHora} maxHeight={140} barColor="bg-action" /></section>
+        {/if}
+
+        {#if dash.alertas?.length}
+          <section class="zd-card zd-alerts">
+            <h2 class="zd-heading"><AlertTriangle size={18} strokeWidth={1.75} aria-hidden="true" />Alertas</h2>
+            <ul>
+              {#each dash.alertas as a}
+                <li><span>{a.mensagem}</span>{#if a.actionHref}<a href={a.actionHref} class="zd-link">{a.actionLabel}<ArrowUpRight size={14} strokeWidth={1.75} aria-hidden="true" /></a>{/if}</li>
+              {/each}
+            </ul>
+          </section>
+        {/if}
+
+        <section class="zd-card zd-act">
+          <div class="zd-card-h">
+            <h2 class="zd-heading">Atividade recente</h2>
+            <a href="/relatorios" class="zd-link">Ver relatório<span class="zd-wide"> completo</span><ArrowUpRight size={14} strokeWidth={1.75} aria-hidden="true" /></a>
+          </div>
+          <ul>
+            {#each dash.atividade as ev}
+              {@const itensVenda = ev.tipo === 'venda' ? vendasItens.filter(i => i.id_venda === ev.id) : []}
+              <li>
+                <span class="zd-t">{new Date(ev.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span class="zd-ev">
+                  <span class="zd-tag" data-tipo={ev.tipo}>{ev.tipo === 'sangria' ? 'Sangria' : (ev.tipo === 'suprimento' ? 'Suprimento' : 'Venda')}</span>
+                  {#if ev.motivo}<small>{ev.motivo}</small>{/if}
+                  {#if ev.tipo === 'venda' && itensVenda.length}
+                    <span class="zd-items">
+                      <span class="zd-items-l">ver itens</span>
+                      <span class="zd-items-pop">{#each itensVenda as it}<span>{it.quantidade}× {it.nome_produto_na_venda}</span>{/each}</span>
+                    </span>
+                  {/if}
+                </span>
+                <span class="zd-v" class:neg={ev.tipo === 'sangria'}>{ev.tipo !== 'venda' ? (ev.tipo === 'sangria' ? '− ' : '+ ') : ''}<MoneyText value={ev.valor} size="sm" /></span>
+                {#if ev.tipo === 'venda'}
+                  <div class="sale-actions" data-sale-menu>
+                    <button type="button" class="zd-icon" title="Ações da venda" aria-label="Ações da venda" aria-haspopup="menu" aria-expanded={vendaMenuAbertoId === ev.id} disabled={reimprimindoVendaId === ev.id} data-testid={`sale-actions-trigger-${ev.id}`} on:click={() => toggleVendaMenu(ev.id)}>
+                      <MoreHorizontal size={16} strokeWidth={1.75} aria-hidden="true" />
+                    </button>
+                    {#if vendaMenuAbertoId === ev.id}
+                      <div class="zd-menu" role="menu" data-testid={`sale-actions-menu-${ev.id}`}>
+                        <button type="button" role="menuitem" on:click={() => reimprimirVenda(ev.id)}><Printer size={16} strokeWidth={1.75} aria-hidden="true" />{reimprimindoVendaId === ev.id ? 'Imprimindo…' : 'Reimprimir venda'}</button>
+                        <button type="button" role="menuitem" class="danger" on:click={(event) => solicitarDelecaoVenda(ev.id, event)}><Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />Excluir venda</button>
+                      </div>
+                    {/if}
+                  </div>
+                {:else}<span></span>{/if}
+              </li>
+            {/each}
+          </ul>
+        </section>
+      </div>
+
+      <div class="zd-col">
+        <OnboardingChecklist />
+        <div class="zd-quick">
+          <a href="/app" class="zd-qa pri"><ShoppingBag size={18} strokeWidth={1.75} aria-hidden="true" />Nova venda</a>
+          <a href="/relatorios" class="zd-qa"><BarChart3 size={18} strokeWidth={1.75} aria-hidden="true" />Relatórios</a>
+          <a href="/gestao/pessoas" class="zd-qa"><Users size={18} strokeWidth={1.75} aria-hidden="true" />Clientes</a>
+          <a href="/gestao/produtos" class="zd-qa"><Package size={18} strokeWidth={1.75} aria-hidden="true" />Produtos</a>
+        </div>
+      </div>
+    </div>
+
+    {#if vendaParaDeletarId}
+      <dialog open class="zd-overlay" aria-modal="true" aria-labelledby="delete-sale-title" tabindex="-1" on:keydown={handleVendaDeleteKeydown} on:click|self={cancelarDelecaoVenda}>
+        <div class="zd-sheet" in:rise>
+          <h3 id="delete-sale-title" class="zd-heading">Excluir venda?</h3>
+          <p class="zd-muted">Esta ação remove a venda do banco de dados e dos relatórios permanentemente. Use apenas para remover vendas de teste.</p>
+          <div class="zd-sheet-acts">
+            <Button variant="outlined" size="touch" onclick={cancelarDelecaoVenda}>Cancelar</Button>
+            <Button variant="danger" size="touch" class="border-danger text-danger" onclick={confirmarDelecaoVenda}>Sim, excluir</Button>
+          </div>
+        </div>
+      </dialog>
+    {/if}
+  {/if}
+</section>
+{:else}
 <section class="wrap">
   <OnboardingChecklist />
 
@@ -494,6 +621,7 @@
     </div>
   {/if}
 </section>
+{/if}
 
 <style>
   .wrap{padding:16px;max-width:1100px;margin:0 auto}
@@ -552,4 +680,73 @@
 
   .loading{height:100px;border-radius:12px;background:linear-gradient(90deg,var(--bg-card),var(--bg-panel),var(--bg-card));animation:sh 1.2s infinite}
   @keyframes sh{0%{background-position:-120px}100%{background-position:240px}}
+
+  /* ═══ Dashboard · Zelo Design System (only when $zeloSurface; mockup 03) — tokens only ═══ */
+  .zd { display: flex; flex-direction: column; gap: 16px; color: var(--text-main); font-family: var(--zelo-font-ui); }
+  .zd-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .zd-eyebrow { margin: 0; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  .zd-title { margin: 6px 0 0; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  .zd-heading { margin: 0; display: flex; align-items: center; gap: 8px; font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
+  .zd-muted { margin: 0; font: var(--type-body); color: var(--text-muted); }
+  .zd-err { margin: 0; padding: 10px 12px; border: 1px solid var(--status-error-border); border-radius: var(--zelo-radius-control); background: var(--status-error-bg); color: var(--status-error-text); font: var(--type-body); }
+  .zd-kpis { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 12px; }
+  .zd-kpi { display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-card); }
+  .zd-kpi.help { cursor: help; }
+  .zd-kpi.hero { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+  .zd-kpi.hero .zd-eyebrow, .zd-kpi.hero .zd-cap { color: color-mix(in srgb, var(--primary-text) 68%, transparent); }
+  .zd-kpi.hero :global(.zd-hero-v small) { color: inherit; opacity: 0.68; }
+  .zd-cap { margin: 0; font: var(--type-caption); color: var(--text-muted); }
+  .zd-kv { margin: 0; display: flex; align-items: center; gap: 8px; font: var(--type-num-lg); font-size: 22px; font-weight: 600; letter-spacing: var(--type-num-lg-tracking); }
+  .zd-kv.warn { color: var(--status-warning-text); }
+  .zd-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--status-error-text); }
+  .zd-dot.on { background: var(--status-success-text); box-shadow: 0 0 0 4px var(--status-success-bg); }
+  .zd-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .zd-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .zd-card { border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-card); }
+  .zd-chart { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .zd-heading .zd-cap { font-weight: 400; }
+  .zd-card-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px 10px; }
+  .zd-link { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; font: var(--type-label); color: var(--text-label); text-decoration: underline; text-underline-offset: 3px; }
+  .zd-link:hover { color: var(--text-main); }
+  .zd-alerts { padding: 16px 18px; border-color: var(--status-warning-border); background: var(--status-warning-bg); color: var(--status-warning-text); }
+  .zd-alerts ul { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .zd-alerts li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font: var(--type-body); }
+  .zd-alerts .zd-link { color: inherit; }
+  .zd-act ul { list-style: none; margin: 0; padding: 0 18px 10px; }
+  .zd-act li { display: grid; grid-template-columns: 50px minmax(0, 1fr) auto 34px; gap: 10px; align-items: center; min-height: 52px; padding: 6px 0; border-top: 1px solid var(--border-subtle); }
+  .zd-t { font: var(--type-num-sm); letter-spacing: var(--type-num-sm-tracking); color: var(--text-muted); }
+  .zd-ev { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .zd-ev small { font: var(--type-caption); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+  .zd-tag { padding: 2px 8px; border-radius: 7px; background: var(--bg-sunken); font: var(--type-caption); font-weight: 500; color: var(--text-label); }
+  .zd-tag[data-tipo="sangria"] { background: var(--status-error-bg); color: var(--status-error-text); }
+  .zd-tag[data-tipo="suprimento"] { background: var(--status-success-bg); color: var(--status-success-text); }
+  .zd-items { position: relative; }
+  .zd-items-l { font: var(--type-caption); color: var(--text-muted); text-decoration: underline dotted; cursor: default; }
+  .zd-items-pop { display: none; position: absolute; left: 0; top: 100%; z-index: 50; margin-top: 4px; width: 220px; padding: 10px 12px; flex-direction: column; gap: 3px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-control); background: var(--bg-panel); box-shadow: var(--elevation-float); font: var(--type-caption); color: var(--text-main); }
+  .zd-items:hover .zd-items-pop { display: flex; }
+  .zd-v { display: inline-flex; align-items: baseline; gap: 2px; font-family: var(--zelo-font-num); justify-self: end; }
+  .zd-v.neg { color: var(--status-error-text); }
+  .zd-v.neg :global(.money small) { color: inherit; }
+  .zd-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; color: var(--text-muted); }
+  .zd-icon:hover { background: var(--bg-sunken); color: var(--text-main); }
+  .zd-menu { position: absolute; right: 0; top: 100%; z-index: 60; min-width: 200px; margin-top: 4px; padding: 6px; display: flex; flex-direction: column; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-control); background: var(--bg-panel); box-shadow: var(--elevation-float); }
+  .zd-menu button { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 10px; border-radius: 8px; font: var(--type-label); color: var(--text-main); text-align: left; }
+  .zd-menu button:hover { background: var(--bg-sunken); }
+  .zd-menu button.danger { color: var(--status-error-text); }
+  .zd-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .zd-qa { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 16px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-card); color: var(--text-main); font: var(--type-body-strong); text-decoration: none; transition: border-color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring); }
+  .zd-qa:hover { border-color: var(--border-strong); }
+  .zd-qa:active { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+  .zd-qa.pri { grid-column: 1 / -1; background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+  .zd-overlay { position: fixed; inset: 0; z-index: 1150; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: 24px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--shadow-color) 42%, transparent); }
+  .zd-sheet { width: min(420px, 100%); padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; border-radius: var(--zelo-radius-sheet); background: var(--bg-panel); box-shadow: var(--shadow-modal); }
+  .zd-sheet-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  @media (max-width: 1023px) { .zd-kpis { grid-template-columns: 1fr 1fr; } .zd-kpi.hero { grid-column: 1 / -1; } .zd-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 767px) {
+    .zd-wide { display: none; }
+    .zd-kpi:last-child { grid-column: 1 / -1; }
+    .zd-act li { grid-template-columns: 44px minmax(0, 1fr) auto 32px; }
+    .zd-overlay { align-items: flex-end; padding: 0; }
+    .zd-sheet { width: 100%; border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0; }
+  }
 </style>

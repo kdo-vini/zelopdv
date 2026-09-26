@@ -59,6 +59,18 @@ const tables = {
     { id: 'o1046cccc', source: 'zelomenu', status: 'accepted', revision: 1, total: 24.9, delivery_fee: 0, created_at: new Date(new Date().setHours(14, 20, 0, 0)).toISOString(), customer: { name: 'Joana' }, fulfillment: { mode: 'pickup' }, payment: { method: 'cash', change_for: 50 }, zelo_order_items: [{ id: 'oi6', product_id: 2, name: 'X-Burger', unit_price: 24.9, quantity: 1, subtotal: 24.9, position: 1 }] },
     { id: 'o1045dddd', source: 'mesa', status: 'ready', revision: 3, total: 112, delivery_fee: 0, created_at: new Date(new Date().setHours(14, 12, 0, 0)).toISOString(), customer: { name: 'Mesa 04' }, fulfillment: { mode: 'table' }, payment: {}, zelo_order_items: [{ id: 'oi7', product_id: 5, name: 'Beirute de frango', unit_price: 32, quantity: 2, subtotal: 64, position: 1 }, { id: 'oi8', product_id: 8, name: 'Suco de laranja 400ml', unit_price: 12, quantity: 4, subtotal: 48, position: 2 }] },
   ] : [],
+  // DASH=1: sales of the open caixa for /gestao (dashboard KPIs, hourly chart, activity feed)
+  ...(process.env.DASH ? (() => {
+    const at = (h, m) => new Date(new Date().setHours(h, m, 0, 0)).toISOString();
+    const vendas = [[9, 12, 42.5, 'pix'], [10, 5, 18, 'dinheiro'], [11, 40, 96.3, 'credito'], [12, 15, 131.8, 'pix'], [12, 50, 64, 'debito'], [13, 22, 29.9, 'fiado'], [14, 8, 87.4, 'pix']]
+      .map(([h, m, v, f], i) => ({ id: `v${i + 1}`, numero_venda: 1040 + i, id_caixa: 'c1', valor_total: v, forma_pagamento: f, valor_recebido: v, valor_troco: 0, valor_desconto: 0, taxa_entrega: 0, tipo_pedido: 'balcao', created_at: at(h, m) }));
+    return {
+      vendas,
+      vendas_itens: [{ id_venda: 'v7', quantidade: 2, nome_produto_na_venda: 'X-Bacon', preco_unitario_na_venda: 29.9 }, { id_venda: 'v7', quantidade: 2, nome_produto_na_venda: 'Coca-Cola lata 350ml', preco_unitario_na_venda: 6.5 }],
+      caixa_movimentacoes: [{ id: 'm1', id_caixa: 'c1', tipo: 'sangria', valor: 150, motivo: 'Depósito banco', created_at: at(13, 40) }, { id: 'm2', id_caixa: 'c1', tipo: 'suprimento', valor: 50, motivo: 'Troco', created_at: at(8, 5) }],
+      vendas_pagamentos: [],
+    };
+  })() : {}),
   access_users: [], categorias: process.env.EMPTY ? [] : cats, subcategorias: [], produtos: process.env.EMPTY ? [] : prods,
   caixas: process.env.NO_CAIXA ? [] : [{ id: 'c1', numero_caixa: 12, id_usuario: UID, data_abertura: new Date(new Date().setHours(8, 0, 0, 0)).toISOString(), data_fechamento: null, valor_inicial: 200 }],
 };
@@ -95,7 +107,7 @@ await page.waitForTimeout(2500);
 console.log('url', page.url());
 for (const name of ADD) {
   let done = false;
-  for (const role of ['tab', 'radio', 'button']) {
+  for (const role of ['tab', 'radio', 'button', 'menuitem']) {
     const loc = page.getByRole(role, { name: new RegExp(name) }).first();
     if (await loc.count()) { await loc.click({ timeout: 5000 }).catch((e) => console.log('click fail', name, e.message)); done = true; break; }
   }
@@ -111,7 +123,7 @@ for (const step of (process.env.STEPS || '').split(',').filter(Boolean)) {
   else if (kind === 'wait') await page.waitForTimeout(Number(arg));
   else if (kind === 'click') {
     let target = null;
-    for (const role of ['tab', 'radio', 'button']) {
+    for (const role of ['tab', 'radio', 'button', 'menuitem']) {
       const loc = page.getByRole(role, { name: new RegExp(arg) }).first();
       if (await loc.count()) { target = loc; break; }
     }
