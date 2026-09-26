@@ -5,6 +5,8 @@
   import { addToast, confirmAction } from '$lib/stores/ui';
   import Spinner from '$lib/components/ui/Spinner.svelte';
   import * as Select from '$lib/components/ui/select/index.js';
+  import UnderlineTabs from '$lib/components/zelo/UnderlineTabs.svelte';
+  import { zeloSurface } from '$lib/theme/surface.js';
 
   // ─── State ───────────────────────────────────────────────────────────────────
   let loading = true;
@@ -441,7 +443,7 @@
 
 <!-- ─── Upsell screen ─────────────────────────────────────────────────────── -->
 {#if !loading && !addonActive}
-  <div class="space-y-6">
+  <div class="space-y-6 access-page access-upsell">
     <header>
       <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Configurações / Acessos</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Controle de Acessos</h1>
@@ -479,7 +481,7 @@
 
 <!-- ─── Main UI ───────────────────────────────────────────────────────────── -->
 {:else}
-  <div class="space-y-6">
+  <div class="space-y-6 access-page">
 
     <!-- Header -->
     <header>
@@ -489,6 +491,17 @@
     </header>
 
     <!-- Tabs -->
+    {#if $zeloSurface}
+      <UnderlineTabs
+        label="Seções do Controle de Acessos"
+        tabs={[
+          { value: 'cargos', label: 'Cargos', count: roles.length },
+          { value: 'usuarios', label: 'Usuários', count: users.length }
+        ]}
+        bind:value={activeTab}
+        class="access-tabs"
+      />
+    {:else}
     <div class="flex gap-1 p-1 rounded-lg w-fit" style="background: var(--bg-input);">
       <button
         class="px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -516,6 +529,7 @@
         {/if}
       </button>
     </div>
+    {/if}
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- TAB: CARGOS                                                             -->
@@ -704,10 +718,10 @@
                       on:mouseleave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <!-- E-mail -->
-                      <td class="px-4 py-3 font-medium" style="color: var(--text-main);">{user.email}</td>
+                      <td data-label="E-mail" class="px-4 py-3 font-medium" style="color: var(--text-main);">{user.email}</td>
 
                       <!-- Cargo -->
-                      <td class="px-4 py-3">
+                      <td data-label="Cargo" class="px-4 py-3">
                         {#if editingUserRoleId === user.id}
                           <div class="flex items-center gap-1">
                             <Select.Root bind:value={editingUserRoleValue}>
@@ -747,7 +761,7 @@
                       </td>
 
                       <!-- Status -->
-                      <td class="px-4 py-3">
+                      <td data-label="Status" class="px-4 py-3">
                         <span
                           class="px-2.5 py-1 rounded-full text-xs font-semibold"
                           style={statusStyle(user.status)}
@@ -757,7 +771,7 @@
                       </td>
 
                       <!-- Ações -->
-                      <td class="px-4 py-3">
+                      <td data-label="Ações" class="px-4 py-3">
                         <div class="flex items-center justify-end gap-1">
                           <!-- Alterar cargo -->
                           {#if editingUserRoleId !== user.id}
@@ -921,6 +935,88 @@
 {/if}
 
 <style>
+  :global([data-surface="app"]) .access-page {
+    max-width: 72rem;
+    animation: access-enter var(--zelo-dur-slow) var(--zelo-ease-spring) both;
+  }
+
+  :global([data-surface="app"]) .access-page > header {
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  :global([data-surface="app"]) .access-page > header p:first-child {
+    color: var(--text-label);
+    font: var(--type-kbd);
+    letter-spacing: var(--type-kbd-tracking);
+  }
+
+  :global([data-surface="app"]) .access-page > header h1 {
+    margin-top: 0.25rem;
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+    letter-spacing: -0.035em;
+  }
+
+  :global([data-surface="app"]) .access-page > header p:last-child {
+    max-width: 42rem;
+    color: var(--text-muted);
+  }
+
+  :global([data-surface="app"]) .access-page :global(.access-tabs) {
+    width: 100%;
+  }
+
+  :global([data-surface="app"]) .access-page > div.space-y-3 > div,
+  :global([data-surface="app"]) .access-page > div.space-y-4 > div:last-child,
+  :global([data-surface="app"]) .access-upsell > div {
+    border-color: var(--border-card) !important;
+    border-radius: var(--zelo-radius-card) !important;
+    background: var(--bg-card) !important;
+    box-shadow: var(--zelo-shadow-card);
+  }
+
+  :global([data-surface="app"]) .access-page > div.space-y-3 > div {
+    transition: border-color var(--zelo-dur-fast) var(--zelo-ease-out), transform var(--zelo-dur-slow) var(--zelo-ease-spring), box-shadow var(--zelo-dur-fast) var(--zelo-ease-out);
+  }
+
+  :global([data-surface="app"]) .access-page > div.space-y-3 > div:hover {
+    border-color: var(--border-strong) !important;
+    transform: translateY(-1px);
+    box-shadow: var(--zelo-shadow-float);
+  }
+
+  :global([data-surface="app"]) .access-page button {
+    min-height: 40px;
+  }
+
+  :global([data-surface="app"]) .access-page button:active,
+  :global([data-surface="app"]) .mobile-bottom-nav-dialog button:active {
+    transform: scale(var(--zelo-press-scale));
+  }
+
+  :global([data-surface="app"]) .access-page table th {
+    color: var(--text-label) !important;
+    font: var(--type-kbd);
+    letter-spacing: var(--type-kbd-tracking);
+  }
+
+  :global([data-surface="app"]) .access-page table tr:last-child {
+    border-bottom: 0 !important;
+  }
+
+  :global([data-surface="app"]) .mobile-bottom-nav-dialog {
+    border-color: var(--border-card) !important;
+    border-radius: var(--zelo-radius-modal) !important;
+    box-shadow: var(--zelo-shadow-modal);
+  }
+
+  @keyframes access-enter {
+    from { opacity: 0; transform: translateY(10px); filter: blur(5px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+
   .input-form {
     width: 100%;
     padding: 0.5rem 0.75rem;
@@ -1025,6 +1121,78 @@
   }
 
   @media (max-width: 640px) {
+    :global([data-surface="app"]) .access-page {
+      padding-bottom: 5rem;
+    }
+
+    :global([data-surface="app"]) .access-page > header {
+      padding-bottom: 1rem;
+    }
+
+    :global([data-surface="app"]) .access-page > div.space-y-4 > div:first-child {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    :global([data-surface="app"]) .access-page > div.space-y-4 > div:first-child button {
+      justify-content: center;
+      width: 100%;
+      min-height: 46px;
+    }
+
+    :global([data-surface="app"]) .access-page table,
+    :global([data-surface="app"]) .access-page table tbody,
+    :global([data-surface="app"]) .access-page table tr,
+    :global([data-surface="app"]) .access-page table td {
+      display: block;
+      width: 100%;
+    }
+
+    :global([data-surface="app"]) .access-page table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    :global([data-surface="app"]) .access-page table tbody {
+      display: grid;
+      gap: 0.75rem;
+      padding: 0.75rem;
+    }
+
+    :global([data-surface="app"]) .access-page table tr {
+      padding: 0.85rem;
+      border: 1px solid var(--border-card) !important;
+      border-radius: var(--zelo-radius-control);
+      background: var(--bg-panel);
+    }
+
+    :global([data-surface="app"]) .access-page table td {
+      display: grid;
+      grid-template-columns: 5rem minmax(0, 1fr);
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.45rem 0 !important;
+    }
+
+    :global([data-surface="app"]) .access-page table td::before {
+      content: attr(data-label);
+      color: var(--text-label);
+      font: var(--type-kbd);
+      letter-spacing: var(--type-kbd-tracking);
+      text-transform: uppercase;
+    }
+
+    :global([data-surface="app"]) .access-page table td > div {
+      justify-content: flex-start;
+    }
+
+    :global([data-surface="app"]) .access-page .permission-item {
+      min-height: 3.35rem;
+    }
+
     .permission-copy {
       align-items: center;
     }

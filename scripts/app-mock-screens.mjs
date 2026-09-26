@@ -18,6 +18,7 @@
  * SLOW=<ms>: delays writes to a table (default empresa_perfil, override with SLOW_TABLE) so a loading state is
  * screenshottable. No effect when absent.
  * BILLING=1 mocks the local Pix create/status endpoints for subscription screenshots.
+ * ACCESS=1 mocks roles and users for Controle de Acessos screenshots.
  * HOLD_NAV=1 suppresses analytics callbacks that navigate away from timed success screens.
  * LOAD_STATE (default networkidle; use domcontentloaded for pages with persistent connections).
  * WAIT_AFTER (milliseconds after navigation; default 2500).
@@ -175,6 +176,52 @@ if (process.env.BILLING) {
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({ paymentId: 'pix_mock_1', status: 'pending', expiresAt }),
+  }));
+}
+if (process.env.ACCESS) {
+  const accessRoles = [
+    {
+      id: 'role-manager',
+      name: 'Gerente',
+      is_system: true,
+      permissions: {
+        'pdv.acessar': true,
+        'pdv.vender': true,
+        'pdv.receber': true,
+        'caixa.abrir': true,
+        'caixa.fechar': true,
+        'produtos.visualizar': true,
+        'estoque.visualizar': true,
+        'relatorios.ver': true,
+      },
+    },
+    {
+      id: 'role-counter',
+      name: 'Caixa',
+      is_system: true,
+      permissions: {
+        'pdv.acessar': true,
+        'pdv.vender': true,
+        'pdv.receber': true,
+        'caixa.abrir': true,
+        'caixa.movimentar': true,
+      },
+    },
+    { id: 'role-kitchen', name: 'Cozinha', is_system: false, permissions: { 'pedidos.cozinha': true } },
+  ];
+  const accessUsers = [
+    { id: 'access-1', email: 'gerencia@padaria.com', role_id: 'role-manager', status: 'active' },
+    { id: 'access-2', email: 'caixa@padaria.com', role_id: 'role-counter', status: 'pending' },
+  ];
+  await ctx.route('**/api/access/roles', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ roles: accessRoles }),
+  }));
+  await ctx.route('**/api/access/users', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ users: accessUsers, addons: { mesas: true, zeloMenu: true } }),
   }));
 }
 if (process.env.WIZARD) {
