@@ -128,7 +128,8 @@ Paridade do legado com o harness (`scripts/app-mock-screens.mjs`):
   `VITE_PUBLIC_SUPABASE_URL=https://mockproj.supabase.co VITE_PUBLIC_SUPABASE_ANON_KEY=anon node_modules/.bin/vite dev --port 5181`,
   rode o harness com `BASE=http://localhost:5181 QS="" CHROMIUM_PATH=/opt/pw-browsers/chromium ROUTE=/perfil VP=390x844 OUT=<dir>/perfil-390`,
   derrube pelo PID; repita na main; compare com
-  `node scripts/compare-screens.mjs <dirMain> <dirBranch>`.
+  `CHROMIUM_PATH=/opt/pw-browsers/chromium node scripts/compare-screens.mjs <dirMain> <dirBranch>`
+  (sai com código 1 se houver diferença e grava `diff-*.png` na pasta da branch).
 - Flags do harness: `DASH=1` (vendas do caixa), `LISTS=1` (pessoas, despesas,
   fiado), `MESAS=1`, `ORDERS=1`, `EMPTY=1`, `NO_CAIXA=1`, `STEPS=click:…,key:…,wait:…`
   (clica tab/radio/button/menuitem pelo nome), `MOTION=1`, `EVAL=<js>` (imprime o
