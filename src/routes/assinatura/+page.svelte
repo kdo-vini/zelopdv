@@ -20,7 +20,7 @@
   import { capturePostHogEvent } from '$lib/posthogClient';
   import { trackStartTrial } from '$lib/metaPixel';
   import { trackGa4Event, trackGoogleAdsInscricao } from '$lib/googleAds';
-  import { MoneyText } from '$lib/components/zelo';
+  import { MoneyText, UnderlineTabs } from '$lib/components/zelo';
   import { zeloSurface } from '$lib/theme/surface.js';
   import {
     CircleCheckBig,
@@ -83,6 +83,12 @@
     { id: 2, label: 'Extensões' },
     { id: 3, label: 'Pagamento' },
   ];
+  const designCheckoutSteps = [
+    { value: 1, label: 'Pacote' },
+    { value: 2, label: 'Extensões' },
+    { value: 3, label: 'Pagamento' },
+  ];
+  const designPlanIds = ['pdv', 'bundle', 'chat'];
   const primaryPlanIds = ['pdv', 'bundle'];
   const addonCatalog = [
     {
@@ -966,7 +972,217 @@
   <meta name="description" content="Monte seu plano ZeloPDV, escolha extensões e pague com Pix ou cartão no fluxo de assinatura do Zelo.">
 </svelte:head>
 
-<section class="assinatura-container" class:zelo-assinatura={$zeloSurface}>
+{#if $zeloSurface}
+<section class="assinatura-container zelo-assinatura zelo-assinatura-layout">
+  <header class="zelo-subscription-header">
+    <div>
+      <p class="breadcrumb">Conta / Assinatura</p>
+      <h1><span class="desktop-title">Sua assinatura Zelo</span><span class="mobile-title">Assinatura</span></h1>
+      <p class="subtitle">Escolha o pacote, ajuste os módulos e finalize com Pix ou cartão em poucos passos.</p>
+    </div>
+    <a href="/app" class="btn-secondary zelo-system-link">Entrar no sistema <span aria-hidden="true">→</span></a>
+  </header>
+
+  {#if camePromptingMesas || camePromptingAcessos || (cameUpgradingTo && cameUpgradingTo !== activePlanTier)}
+    <div class="status-card info zelo-context-status">
+      <div class="status-icon">
+        {#if camePromptingMesas}<Table2 class="size-6" aria-hidden="true" />
+        {:else if camePromptingAcessos}<KeyRound class="size-6" aria-hidden="true" />
+        {:else}<Zap class="size-6" aria-hidden="true" />{/if}
+      </div>
+      <div>
+        <strong>
+          {#if camePromptingMesas}Ativar Módulo Mesas
+          {:else if camePromptingAcessos}Ativar Controle de Acessos
+          {:else}Upgrade para {PLANS[cameUpgradingTo].name}{/if}
+        </strong>
+        <div class="status-detail">Ajuste o pacote ou as extensões abaixo e confirme no pagamento.</div>
+      </div>
+    </div>
+  {/if}
+
+  {#if isActiveStrict}
+    <div class="status-card {subStatus === 'trialing' ? 'warning' : 'active'} zelo-current-status">
+      <div class="status-icon">
+        {#if subStatus === 'trialing'}<Hourglass class="size-6" aria-hidden="true" />
+        {:else}<CircleCheckBig class="size-6" aria-hidden="true" />{/if}
+      </div>
+      <div>
+        <strong>
+          {#if subStatus === 'trialing' && trialDaysLeft !== null}
+            {trialDaysLeft === 0 ? 'Seu teste termina hoje!' : `Teste termina em ${trialDaysLeft} dia${trialDaysLeft === 1 ? '' : 's'}`}
+          {:else}
+            Assinatura ativa — {PLANS[activePlanTier]?.name || 'Plano'}
+          {/if}
+        </strong>
+        {#if expiryDate}
+          <div class="status-detail">Próxima renovação: {new Date(expiryDate).toLocaleDateString('pt-BR')} · R$ {activePlanPrice}/mês</div>
+        {/if}
+      </div>
+    </div>
+  {:else if autoStartingTrial}
+    <div class="status-card info zelo-current-status">
+      <div class="status-icon"><Hourglass class="size-6" aria-hidden="true" /></div>
+      <div><strong>Ativando seu teste gratuito de {TRIAL_DAYS} dias…</strong><div class="status-detail">Você será redirecionado em instantes.</div></div>
+    </div>
+  {:else}
+    <div class="status-card {messageType === 'warning' ? 'warning' : 'info'} zelo-current-status">
+      <div class="status-icon">
+        {#if messageType === 'warning'}<TriangleAlert class="size-6" aria-hidden="true" />
+        {:else}<PartyPopper class="size-6" aria-hidden="true" />{/if}
+      </div>
+      <div><strong>{message || defaultMessage}</strong></div>
+    </div>
+  {/if}
+
+  {#if !autoStartingTrial}
+    <div class="zelo-checkout-tabs">
+      <UnderlineTabs label="Etapas da assinatura" tabs={designCheckoutSteps} bind:value={checkoutStep} />
+    </div>
+
+    <div class="mobile-step-dots zelo-mobile-dots" aria-label={`Etapa ${checkoutStep} de 3`}>
+      {#each designCheckoutSteps as step}
+        <button type="button" class="mobile-step-dot" class:active={checkoutStep === step.value} on:click={() => goToCheckoutStep(step.value)} aria-label={`Ir para ${step.label}`}></button>
+      {/each}
+    </div>
+
+    <div class="zelo-checkout-grid">
+      <div class="zelo-checkout-main">
+        {#key checkoutStep}
+          <section class="zelo-step-panel">
+            {#if checkoutStep === 1}
+              <div class="step-panel-header">
+                <p class="step-kicker">{isActiveStrict ? 'Mudar ou renovar' : 'Comece por aqui'}</p>
+                <h2 class="selector-title">Escolha o pacote base da sua operação</h2>
+                <p class="step-copy">{wizardStepOneCopy}</p>
+              </div>
+              <div class="plan-focus-grid zelo-plan-row">
+                {#each designPlanIds as planId}
+                  <button
+                    type="button"
+                    class="plan-card plan-card-decision"
+                    class:selected={selectedPlan === planId}
+                    class:current={planId === activePlanTier}
+                    on:click={() => handlePlanSelection(planId)}
+                  >
+                    {#if planId === 'bundle'}<span class="plan-badge">Mais popular</span>{/if}
+                    <span class="decision-eyebrow">{getPlanDecisionEyebrow(planId)}</span>
+                    <span class="plan-name">{PLANS[planId].name}</span>
+                    <span class="plan-price">R$ {planCardPrice(planId)}<span class="plan-cycle">/mês</span></span>
+                    {#if PLANS[planId].bundleSavings}<span class="plan-savings">Economize R$ {PLANS[planId].bundleSavings}</span>{/if}
+                    <span class="plan-tagline">{PLANS[planId].tagline}</span>
+                    <span class="plan-cta">{selectedPlan === planId ? (planId === activePlanTier ? 'Plano atual' : 'Pacote selecionado') : 'Escolher pacote'}</span>
+                  </button>
+                {/each}
+              </div>
+            {:else if checkoutStep === 2}
+              <div class="step-panel-header">
+                <p class="step-kicker">Mudar ou renovar</p>
+                <h2 class="selector-title">Adicione só o que faz diferença</h2>
+                <p class="step-copy">{wizardStepTwoCopy}</p>
+              </div>
+              <div class="addons-grid">
+                {#each addonCatalog as addon}
+                  <button
+                    type="button"
+                    class="addon-choice"
+                    class:selected={addonSelected(addon.id)}
+                    class:disabled={!addonAvailable(addon.id)}
+                    on:click={() => toggleAddonSelection(addon.id)}
+                    disabled={!addonAvailable(addon.id)}
+                  >
+                    <div class="addon-choice-top">
+                      <div class="addon-choice-title"><strong>{addon.name}</strong><span>{addon.priceLabel}</span></div>
+                      <span class="addon-pill" class:on={addonSelected(addon.id) || addonIncludedInPlan(addon.id)}>
+                        {#if addonAvailable(addon.id)}{addonSelected(addon.id) ? 'Selecionado' : 'Opcional'}
+                        {:else if addonIncludedInPlan(addon.id)}Já incluso
+                        {:else}Não disponível{/if}
+                      </span>
+                    </div>
+                    <p class="addon-choice-copy">
+                      {#if addonAvailable(addon.id)}{addon.teaser}
+                      {:else if addonIncludedInPlan(addon.id)}Já vem no {selectedPlanName} sem custo extra — você não perde este módulo.
+                      {:else}Disponível apenas em planos com ZeloPDV.{/if}
+                    </p>
+                    {#if addonAvailable(addon.id)}<span class="addon-pain">Resolve: {addon.painPoint}</span>{/if}
+                  </button>
+                {/each}
+              </div>
+              <EntitlementLossWarning names={droppedEntitlementNames} restorePrice={activePlanPrice} onRestore={activePlanTier ? restoreActivePackage : null} />
+            {:else}
+              <div class="step-panel-header">
+                <p class="step-kicker">Mudar ou renovar</p>
+                <h2 class="selector-title">Revise e escolha como pagar</h2>
+                <p class="step-copy">{wizardStepThreeCopy}</p>
+              </div>
+              <div class="step-total-spotlight zelo-payment-total">
+                <span class="step-total-label">{activePackageChanged ? 'Novo pacote' : (isActiveStrict ? 'Pacote atual' : 'Total do seu pacote')}</span>
+                <MoneyText value={planPrice} size="lg" animate />
+                <p>{selectedAddons.length ? selectionSummary.join(' + ') : selectedPlanTagline}</p>
+              </div>
+              <EntitlementLossWarning names={droppedEntitlementNames} restorePrice={activePlanPrice} onRestore={activePlanTier ? restoreActivePackage : null} />
+              {#if isActiveStrict}
+                <div class="renewal-summary">
+                  <span>Vencimento atual <strong>{expiryDateLabel || 'não definido'}</strong></span>
+                  <span>Após o pagamento <strong>{projectedRenewalLabel}</strong></span>
+                </div>
+              {/if}
+              {#if needsDocumento}
+                <div class="documento-field">
+                  <label for="documento-pix-zelo" class="field-label">CPF ou CNPJ</label>
+                  <p class="field-help">O Pix precisa do documento de quem recebe. Fica salvo no seu perfil, você digita uma vez só.</p>
+                  <input id="documento-pix-zelo" class="field-input" class:field-input-error={!!documentoError} type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" value={documentoInput} on:input={(e) => { documentoInput = maskDocumento(e.target.value); e.target.value = documentoInput; documentoError = ''; }} />
+                  {#if documentoError}<p class="field-error">{documentoError}</p>{/if}
+                </div>
+              {/if}
+              <div class="payment-grid">
+                <button class="payment-card" type="button" on:click={() => isActiveStrict ? gerarPix({ renewal: true }) : gerarPix()} disabled={loading || pixLoading}>
+                  <div class="payment-card-head"><span class="payment-card-icon" aria-hidden="true"><OfflineIcon icon={pixIconData} /></span><span class="payment-card-kicker">Pix</span></div>
+                  <strong>{pixPaymentTitle}</strong><span>{pixPaymentDescription}</span><span class="payment-card-cta">{pixPaymentCta}</span>
+                </button>
+                <button class="payment-card" type="button" on:click={assinar} disabled={loading || pixLoading}>
+                  <div class="payment-card-head"><span class="payment-card-icon" aria-hidden="true"><svg viewBox="0 0 64 64" role="presentation" focusable="false"><rect x="8" y="14" width="48" height="36" rx="8" fill="none" stroke="currentColor" stroke-width="4" /><rect x="12" y="22" width="40" height="8" rx="2" fill="currentColor" opacity="0.9" /><rect x="16" y="38" width="12" height="4" rx="2" fill="currentColor" opacity="0.55" /></svg></span><span class="payment-card-kicker">Cartão</span></div>
+                  <strong>{cardPaymentTitle}</strong><span>{cardPaymentDescription}</span><span class="payment-card-cta">{cardPaymentCta}</span>
+                </button>
+              </div>
+              {#if pixPayment && !pixPaymentMatchesSelection}
+                <div class="status-card warning compact-status"><div class="status-icon"><TriangleAlert class="size-6" aria-hidden="true" /></div><div>Você alterou o plano ou as extensões depois de gerar o Pix. Gere uma nova cobrança para continuar com a seleção atual.</div></div>
+              {/if}
+            {/if}
+          </section>
+        {/key}
+      </div>
+
+      <aside class="checkout-summary zelo-checkout-summary">
+        <div>
+          <p class="summary-kicker">{isActiveStrict && !activePackageChanged ? 'Renovação do pacote atual' : 'Pacote selecionado'}</p>
+          <h2 class="summary-title">{selectedPlanName}</h2>
+          <p class="summary-copy">{selectedAddons.length ? selectionSummary.slice(1).join(' + ') : selectedPlanTagline}</p>
+        </div>
+        <div class="summary-total"><span>Total mensal</span><strong><MoneyText value={planPrice} size="md" animate /></strong></div>
+        <div class="zelo-summary-actions">
+          <button type="button" class="btn-secondary" disabled={checkoutStep === 1} on:click={() => goToCheckoutStep(checkoutStep - 1)}>Voltar</button>
+          {#if checkoutStep < 3}<button type="button" class="btn-primary" on:click={() => goToCheckoutStep(checkoutStep + 1)}>{checkoutStep === 1 ? 'Continuar' : 'Revisar e pagar'}</button>{/if}
+        </div>
+      </aside>
+    </div>
+
+    {#if checkoutStep < 3}
+      <div class="mobile-sticky-summary zelo-mobile-summary" aria-label="Resumo do pacote selecionado">
+        <div class="mobile-sticky-copy"><span>{selectedPlanName}</span><strong><MoneyText value={planPrice} size="sm" animate /></strong></div>
+        <button type="button" class="btn-primary mobile-sticky-action" on:click={() => goToCheckoutStep(checkoutStep + 1)}>{checkoutStep === 1 ? 'Continuar' : 'Revisar e pagar'}</button>
+      </div>
+    {/if}
+
+    {#if isActiveStrict}
+      <div class="actions-row"><button class="btn-danger-outline" on:click={cancelarAssinatura} disabled={canceling}>{canceling ? 'Cancelando…' : 'Cancelar assinatura'}</button></div>
+    {:else}
+      <p class="legal-text">Ao assinar, você concorda com nossos <a href="/termos">Termos de Uso</a> e <a href="/privacidade">Política de Privacidade</a>. Pagamento via cartão ou Pix.</p>
+    {/if}
+  {/if}
+</section>
+{:else}
+<section class="assinatura-container">
   <p class="breadcrumb">Conta / Assinatura</p>
   <h1 class="text-xl font-bold text-slate-100 tracking-tight">Sua assinatura Zelo</h1>
   <p class="subtitle">Escolha o pacote, ajuste os módulos e finalize com Pix ou cartão em poucos passos.</p>
@@ -1674,6 +1890,7 @@
     </p>
   {/if}
 </section>
+{/if}
 
 {#if pixModalOpen && pixPayment && pixPaymentMatchesSelection}
   <div class="pix-modal-layer">
@@ -2947,24 +3164,14 @@
   }
 
   .zelo-assinatura .status-card,
-  .zelo-assinatura .checkout-shell,
-  .zelo-assinatura .checkout-summary,
-  .zelo-assinatura .current-package-card {
+  .zelo-assinatura .checkout-summary {
     border-radius: var(--zelo-radius-card);
   }
 
-  .zelo-assinatura .checkout-shell,
-  .zelo-assinatura .mobile-step-pagination,
   .zelo-assinatura .mobile-sticky-summary {
     box-shadow: var(--elevation-card);
   }
 
-  .zelo-assinatura .checkout-track {
-    transition-duration: var(--zelo-dur-slow);
-    transition-timing-function: var(--zelo-ease-spring);
-  }
-
-  .zelo-assinatura .step-chip,
   .zelo-assinatura .btn-primary,
   .zelo-assinatura .btn-secondary,
   .zelo-assinatura .btn-danger-outline,
@@ -2974,7 +3181,6 @@
     transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring), border-color var(--zelo-dur-fast), background-color var(--zelo-dur-fast), box-shadow var(--zelo-dur-fast), color var(--zelo-dur-fast), opacity var(--zelo-dur-fast);
   }
 
-  .zelo-assinatura .step-chip:active,
   .zelo-assinatura .btn-primary:active:not(:disabled),
   .zelo-assinatura .btn-secondary:active:not(:disabled),
   .zelo-assinatura .btn-danger-outline:active:not(:disabled),
@@ -2985,7 +3191,6 @@
     transition-duration: var(--zelo-dur-fast);
   }
 
-  .zelo-assinatura .step-chip:focus-visible,
   .zelo-assinatura .btn-primary:focus-visible,
   .zelo-assinatura .btn-secondary:focus-visible,
   .zelo-assinatura .btn-danger-outline:focus-visible,
@@ -2996,7 +3201,6 @@
     box-shadow: 0 0 0 4px var(--focus);
   }
 
-  .zelo-assinatura .step-chip,
   .zelo-assinatura .btn-primary,
   .zelo-assinatura .btn-secondary,
   .zelo-assinatura .btn-danger-outline {
@@ -3013,7 +3217,6 @@
 
   .zelo-assinatura .plan-card.selected,
   .zelo-assinatura .plan-card.current.selected,
-  .zelo-assinatura .plan-card.bundle.selected,
   .zelo-assinatura .addon-choice.selected {
     border-color: var(--primary);
     background: color-mix(in srgb, var(--primary) 5%, var(--bg-card));
@@ -3022,7 +3225,6 @@
 
   .zelo-assinatura .plan-card-decision .plan-price,
   .zelo-assinatura .summary-total strong,
-  .zelo-assinatura .step-total-spotlight strong,
   .zelo-assinatura .mobile-sticky-copy strong,
   .zelo-assinatura .renewal-summary strong {
     font-family: var(--type-num-lg-font);
@@ -3045,6 +3247,239 @@
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  .zelo-assinatura-layout {
+    max-width: 78rem;
+    gap: 1.25rem;
+  }
+
+  .zelo-subscription-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .zelo-subscription-header h1 {
+    margin: 0;
+    color: var(--text-main);
+    font: var(--type-title);
+    letter-spacing: var(--type-title-tracking);
+  }
+
+  .zelo-system-link {
+    flex: none;
+    gap: 0.5rem;
+    min-height: 44px;
+    text-decoration: none;
+  }
+
+  .zelo-current-status,
+  .zelo-context-status {
+    padding: 0.875rem 1rem;
+  }
+
+  .zelo-checkout-tabs {
+    margin-top: 0.25rem;
+  }
+
+  .zelo-mobile-dots {
+    display: none;
+  }
+
+  .mobile-title {
+    display: none;
+  }
+
+  .zelo-checkout-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem);
+    align-items: start;
+    gap: 1.25rem;
+  }
+
+  .zelo-checkout-main {
+    min-width: 0;
+  }
+
+  .zelo-step-panel {
+    display: grid;
+    gap: 1.25rem;
+    animation: zelo-step-in var(--zelo-dur-base) var(--zelo-ease-out) both;
+  }
+
+  .zelo-step-panel .step-panel-header {
+    max-width: 44rem;
+    text-align: left;
+  }
+
+  .zelo-plan-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .zelo-assinatura .zelo-plan-row .plan-card {
+    min-height: 20rem;
+    border-color: var(--border-card);
+    background: var(--bg-card);
+  }
+
+  .zelo-assinatura .zelo-plan-row .plan-card.current:not(.selected) {
+    border-color: var(--border-card);
+    background: var(--bg-card);
+  }
+
+  .zelo-assinatura .zelo-plan-row .plan-card.selected {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-text);
+    box-shadow: var(--elevation-card);
+  }
+
+  .zelo-assinatura .zelo-plan-row .plan-card.selected :is(.decision-eyebrow, .plan-name, .plan-price, .plan-cycle, .plan-tagline, .plan-cta, .plan-savings) {
+    color: var(--primary-text);
+  }
+
+  .zelo-assinatura .zelo-plan-row .plan-card.selected .plan-badge {
+    background: var(--bg-card);
+    color: var(--primary);
+  }
+
+  .zelo-checkout-summary {
+    position: sticky;
+    top: 1rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border-card);
+    background: var(--bg-card);
+    box-shadow: var(--elevation-card);
+  }
+
+  .zelo-summary-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .zelo-summary-actions > :only-child {
+    grid-column: 1 / -1;
+  }
+
+  .zelo-summary-actions .btn-primary,
+  .zelo-summary-actions .btn-secondary {
+    width: 100%;
+    padding-inline: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .zelo-payment-total :global(.money) {
+    margin-top: 0.25rem;
+  }
+
+  @keyframes zelo-step-in {
+    from { opacity: 0; filter: blur(5px); transform: translateY(6px); }
+    to { opacity: 1; filter: blur(0); transform: translateY(0); }
+  }
+
+  @media (max-width: 760px) {
+    .zelo-assinatura-layout {
+      margin-top: 0;
+      padding-bottom: 7.5rem;
+      gap: 1rem;
+    }
+
+    .zelo-subscription-header {
+      align-items: center;
+      padding-bottom: 0.75rem;
+    }
+
+    .zelo-subscription-header .breadcrumb,
+    .zelo-subscription-header .subtitle {
+      display: none;
+    }
+
+    .zelo-subscription-header h1 {
+      font: var(--type-heading);
+      letter-spacing: var(--type-heading-tracking);
+    }
+
+    .zelo-system-link {
+      display: none;
+    }
+
+    .desktop-title {
+      display: none;
+    }
+
+    .mobile-title {
+      display: inline;
+    }
+
+    .zelo-current-status,
+    .zelo-context-status {
+      padding: 0.75rem;
+      gap: 0.75rem;
+    }
+
+    .zelo-current-status .status-icon,
+    .zelo-context-status .status-icon {
+      width: 2rem;
+      height: 2rem;
+    }
+
+    .zelo-checkout-tabs {
+      display: none;
+    }
+
+    .zelo-mobile-dots {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0;
+    }
+
+    .zelo-checkout-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .zelo-checkout-summary {
+      display: none;
+    }
+
+    .zelo-step-panel {
+      gap: 1rem;
+    }
+
+    .zelo-step-panel .step-panel-header {
+      margin: 0;
+    }
+
+    .zelo-step-panel .selector-title {
+      margin-top: 0.25rem;
+      font: var(--type-heading);
+      letter-spacing: var(--type-heading-tracking);
+      text-align: left;
+    }
+
+    .zelo-step-panel .step-copy {
+      margin-top: 0.375rem;
+    }
+
+    .zelo-plan-row {
+      grid-template-columns: 1fr;
+    }
+
+    .zelo-assinatura .zelo-plan-row .plan-card {
+      min-height: 0;
+    }
+
+    .zelo-mobile-summary {
+      display: flex;
+    }
   }
 
   :global([data-surface="app"]) .pix-modal-close {

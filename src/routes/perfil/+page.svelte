@@ -742,6 +742,7 @@
         </div>
         {#if activeTab !== 'assinatura' && activeTab !== 'integracoes'}
           <MorphButton
+            class="profile-header-save"
             state={saving ? 'loading' : 'idle'}
             size="touch"
             type={activeTab === 'preferencias' ? 'button' : 'submit'}
@@ -1464,6 +1465,19 @@
       {/if}
 
     {/if}
+
+    {#if $zeloSurface && activeTab !== 'assinatura' && activeTab !== 'integracoes'}
+      <div class="profile-mobile-save">
+        <MorphButton
+          state={saving ? 'loading' : 'idle'}
+          size="touch"
+          type={activeTab === 'preferencias' ? 'button' : 'submit'}
+          onclick={activeTab === 'preferencias' ? salvarPreferencias : undefined}
+          disabled={activeTab !== 'preferencias' && (!canSave || saving)}
+          loadingLabel="Salvando alterações…"
+        >Salvar alterações</MorphButton>
+      </div>
+    {/if}
   </form>
 
   {#if !loading}
@@ -1637,6 +1651,10 @@
     align-items: flex-end;
   }
 
+  :global([data-surface="app"]) .profile-mobile-save {
+    display: none;
+  }
+
   :global([data-surface="app"]) .profile-header h1,
   :global([data-surface="app"]) .profile-subuser h1 {
     color: var(--text-main);
@@ -1712,6 +1730,22 @@
 
     :global([data-surface="app"]) .profile-header > div,
     :global([data-surface="app"]) .profile-header :global(.mb) {
+      width: 100%;
+    }
+
+    :global([data-surface="app"]) .profile-header :global(.profile-header-save) {
+      display: none;
+    }
+
+    :global([data-surface="app"]) .profile-mobile-save {
+      display: block;
+      width: 100%;
+      max-width: 48rem;
+      margin-top: 1.25rem;
+      margin-bottom: 5.5rem;
+    }
+
+    :global([data-surface="app"]) .profile-mobile-save :global(.mb) {
       width: 100%;
     }
 
