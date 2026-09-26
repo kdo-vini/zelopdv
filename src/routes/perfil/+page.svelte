@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte';
+  import { get } from 'svelte/store';
   import { supabase } from '$lib/supabaseClient';
   import { translateSubscriptionStatus } from '$lib/errorUtils';
   import { page } from '$app/stores';
@@ -19,6 +20,9 @@
   import { printStationEnabled, setPrintStationEnabled, setPrintStationOwner } from '$lib/printStationPreference.js';
   import { printStationStatus } from '$lib/stores/printStation.js';
   import IfoodIntegrationCard from '$lib/components/integrations/IfoodIntegrationCard.svelte';
+  import { MorphButton, UnderlineTabs } from '$lib/components/zelo';
+  import { blurSwap } from '$lib/motion';
+  import { zeloSurface } from '$lib/theme/surface.js';
   import {
     detectZeloImpressao,
     getConfig as getZeloImpressaoConfig,
@@ -49,7 +53,13 @@
     { id: 'preferencias', label: 'Preferências' },
     { id: 'integracoes',  label: 'Integrações' },
   ];
+  const designTabs = tabs.map((tab) => ({ value: tab.id, label: tab.label }));
   let activeTab = 'perfil';
+
+  function profileBlur(node, params, options) {
+    if (!get(zeloSurface)) return { duration: 0 };
+    return blurSwap(node, params, options);
+  }
 
   async function syncProfileAnchor() {
     if (typeof window === 'undefined') return;
@@ -657,7 +667,7 @@
 <svelte:window on:hashchange={syncProfileAnchor} />
 
 {#if isSubUser}
-  <div class="max-w-2xl">
+  <div class="profile-shell profile-subuser max-w-2xl">
     <div class="mb-6">
       <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Meu Perfil</p>
       <h1 class="text-xl font-bold text-slate-100 tracking-tight">Minha conta</h1>
@@ -667,7 +677,7 @@
     {#if loading}
       <p class="text-sm" style="color: var(--text-muted);">Carregando…</p>
     {:else}
-      <section class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+      <section class="profile-card rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
         <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Seus dados</h2>
 
         <div class="grid gap-3 text-sm">
@@ -702,7 +712,7 @@
         </div>
       </section>
 
-      <section class="rounded-lg p-5 grid gap-3 mt-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+      <section class="profile-card rounded-lg p-5 grid gap-3 mt-5" style="background: var(--bg-card); border: 1px solid var(--border-card);">
         <div>
           <h2 class="text-sm font-semibold" style="color: var(--text-main);">Operação offline</h2>
           <p class="text-xs mt-1 leading-relaxed" style="color: var(--text-muted);">Já acontece automaticamente enquanto você usa o sistema. Abra aqui só para forçar uma atualização agora neste aparelho.</p>
@@ -720,26 +730,46 @@
   <OnboardingWizard show={showOnboardingWizard} userId={userId} email={email} />
 {/if}
 
-<form on:submit|preventDefault={salvar}>
+<form class="profile-owner-form" on:submit|preventDefault={salvar}>
 
     <!-- Page header -->
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-      <div>
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Meu Perfil</p>
-        <h1 class="text-xl font-bold text-slate-100 tracking-tight">Configurações da Conta</h1>
+    {#if $zeloSurface}
+      <div class="profile-header flex items-start justify-between gap-4 mb-6 flex-wrap">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Meu Perfil</p>
+          <h1 class="text-xl font-bold tracking-tight">Minha conta</h1>
+          <p class="profile-intro mt-2 text-sm" style="color: var(--text-muted);">Gerencie seus dados, preferências e integrações em um só lugar.</p>
+        </div>
+        {#if activeTab !== 'assinatura' && activeTab !== 'integracoes'}
+          <MorphButton
+            state={saving ? 'loading' : 'idle'}
+            size="touch"
+            type={activeTab === 'preferencias' ? 'button' : 'submit'}
+            onclick={activeTab === 'preferencias' ? salvarPreferencias : undefined}
+            disabled={activeTab !== 'preferencias' && (!canSave || saving)}
+            loadingLabel="Salvando alterações…"
+          >Salvar alterações</MorphButton>
+        {/if}
       </div>
-      {#if activeTab !== 'assinatura' && activeTab !== 'integracoes'}
-        <button
-          type={activeTab === 'preferencias' ? 'button' : 'submit'}
-          on:click={activeTab === 'preferencias' ? salvarPreferencias : undefined}
-          class="px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-60 transition-colors"
-          style="background: var(--primary); color: var(--primary-text);"
-          disabled={activeTab !== 'preferencias' && (!canSave || saving)}
-        >
-          {saving ? 'Salvando…' : 'Salvar alterações'}
-        </button>
-      {/if}
-    </div>
+    {:else}
+      <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style="color: var(--text-muted);">Conta / Meu Perfil</p>
+          <h1 class="text-xl font-bold text-slate-100 tracking-tight">Configurações da Conta</h1>
+        </div>
+        {#if activeTab !== 'assinatura' && activeTab !== 'integracoes'}
+          <button
+            type={activeTab === 'preferencias' ? 'button' : 'submit'}
+            on:click={activeTab === 'preferencias' ? salvarPreferencias : undefined}
+            class="px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-60 transition-colors"
+            style="background: var(--primary); color: var(--primary-text);"
+            disabled={activeTab !== 'preferencias' && (!canSave || saving)}
+          >
+            {saving ? 'Salvando…' : 'Salvar alterações'}
+          </button>
+        {/if}
+      </div>
+    {/if}
 
     {#if msg}
       <div class="mb-4 text-sm rounded-md px-3 py-2" style="color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);">{msg}</div>
@@ -750,23 +780,29 @@
     {:else}
 
       <!-- Tab nav -->
-      <nav class="perfil-tabs flex gap-1 border-b mb-6 whitespace-nowrap" style="border-color: var(--border-subtle);">
-        {#each tabs as t}
-          <button
-            type="button"
-            on:click={() => (activeTab = t.id)}
-            class="px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors"
-            style="
-              border-color: {activeTab === t.id ? 'var(--primary)' : 'transparent'};
-              color: {activeTab === t.id ? 'var(--primary)' : 'var(--text-muted)'};
-            "
-          >{t.label}</button>
-        {/each}
-      </nav>
+      {#if $zeloSurface}
+        <div class="profile-tabs-shell mb-6">
+          <UnderlineTabs label="Configurações da conta" tabs={designTabs} bind:value={activeTab} />
+        </div>
+      {:else}
+        <nav class="perfil-tabs flex gap-1 border-b mb-6 whitespace-nowrap" style="border-color: var(--border-subtle);">
+          {#each tabs as t}
+            <button
+              type="button"
+              on:click={() => (activeTab = t.id)}
+              class="px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors"
+              style="
+                border-color: {activeTab === t.id ? 'var(--primary)' : 'transparent'};
+                color: {activeTab === t.id ? 'var(--primary)' : 'var(--text-muted)'};
+              "
+            >{t.label}</button>
+          {/each}
+        </nav>
+      {/if}
 
       <!-- ─── Aba 1: Perfil ──────────────────────────────── -->
       {#if activeTab === 'perfil'}
-        <div class="grid gap-5 max-w-2xl">
+        <div class="profile-tab-panel grid gap-5 max-w-2xl" in:profileBlur>
 
           <!-- Logotipo -->
           <section id="logo" class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card); scroll-margin-top: 1rem;">
@@ -840,7 +876,7 @@
 
       <!-- ─── Aba 2: Empresa ────────────────────────────── -->
       {#if activeTab === 'empresa'}
-        <div class="grid gap-5 max-w-2xl">
+        <div class="profile-tab-panel grid gap-5 max-w-2xl" in:profileBlur>
 
           <!-- Informações Fiscais -->
           <section id="documento" class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card); scroll-margin-top: 1rem;">
@@ -931,7 +967,7 @@
 
       <!-- ─── Aba 3: Assinatura ─────────────────────────── -->
       {#if activeTab === 'assinatura'}
-        <div class="grid gap-5 max-w-2xl">
+        <div class="profile-tab-panel grid gap-5 max-w-2xl" in:profileBlur>
 
           <!-- Status card -->
           <section class="rounded-xl p-6" style="background: var(--bg-card); border: 1px solid var(--border-card);">
@@ -1019,7 +1055,7 @@
 
       <!-- ─── Aba 4: Preferências ───────────────────────── -->
       {#if activeTab === 'preferencias'}
-        <div class="grid gap-5 max-w-2xl">
+        <div class="profile-tab-panel grid gap-5 max-w-2xl" in:profileBlur>
 
           <!-- Impressão -->
           <section id="largura-bobina" class="rounded-lg p-5 grid gap-4" style="background: var(--bg-card); border: 1px solid var(--border-card); scroll-margin-top: 1rem;">
@@ -1202,7 +1238,7 @@
 
       <!-- ─── Aba 5: Integrações ──────────────────────────── -->
       {#if activeTab === 'integracoes'}
-        <div class="grid gap-5 max-w-2xl">
+        <div class="profile-tab-panel grid gap-5 max-w-2xl" in:profileBlur>
 
           <IfoodIntegrationCard />
 
@@ -1432,7 +1468,7 @@
 
   {#if !loading}
     <!-- Zona de perigo — recolhida por padrão, no rodapé do perfil do titular. -->
-    <div class="mt-10 pt-6" style="border-top: 1px solid var(--border-subtle);">
+    <div class="profile-danger mt-10 pt-6" style="border-top: 1px solid var(--border-subtle);">
       {#if deletionScheduledAt}
         <!-- Exclusão agendada: oferecer reativação dentro da carência. -->
         <section class="rounded-lg p-5 grid gap-3" style="background: color-mix(in srgb, var(--warning) 8%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);">
@@ -1588,5 +1624,118 @@
   }
   .perfil-tabs::-webkit-scrollbar {
     display: none;
+  }
+
+  :global([data-surface="app"]) .profile-shell,
+  :global([data-surface="app"]) .profile-owner-form,
+  :global([data-surface="app"]) .profile-danger {
+    width: 100%;
+    max-width: 72rem;
+  }
+
+  :global([data-surface="app"]) .profile-header {
+    align-items: flex-end;
+  }
+
+  :global([data-surface="app"]) .profile-header h1,
+  :global([data-surface="app"]) .profile-subuser h1 {
+    color: var(--text-main);
+  }
+
+  :global([data-surface="app"]) .profile-intro {
+    max-width: 34rem;
+    line-height: 1.55;
+  }
+
+  :global([data-surface="app"]) .profile-tabs-shell,
+  :global([data-surface="app"]) .profile-tab-panel,
+  :global([data-surface="app"]) .profile-subuser,
+  :global([data-surface="app"]) .profile-danger {
+    max-width: 48rem;
+  }
+
+  :global([data-surface="app"]) .profile-tab-panel > section,
+  :global([data-surface="app"]) .profile-card {
+    border-radius: var(--zelo-radius-card);
+    box-shadow: var(--elevation-card);
+  }
+
+  :global([data-surface="app"]) .profile-tab-panel > section > h2,
+  :global([data-surface="app"]) .profile-card > h2 {
+    font: var(--type-label);
+    font-weight: 650;
+    letter-spacing: 0.08em;
+  }
+
+  :global([data-surface="app"]) .profile-owner-form :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"])),
+  :global([data-surface="app"]) .profile-owner-form :global(select),
+  :global([data-surface="app"]) .profile-owner-form :global(textarea) {
+    min-height: 44px;
+    border-radius: var(--zelo-radius-control);
+    transition: border-color var(--zelo-dur-fast), box-shadow var(--zelo-dur-fast), background-color var(--zelo-dur-fast);
+  }
+
+  :global([data-surface="app"]) .profile-owner-form :global(input:focus-visible),
+  :global([data-surface="app"]) .profile-owner-form :global(select:focus-visible),
+  :global([data-surface="app"]) .profile-owner-form :global(textarea:focus-visible) {
+    outline: none;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  :global([data-surface="app"]) .profile-owner-form :global(button),
+  :global([data-surface="app"]) .profile-subuser :global(button),
+  :global([data-surface="app"]) .profile-danger :global(button),
+  :global([data-surface="app"]) .profile-danger :global(a) {
+    transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring), opacity var(--zelo-dur-fast), background-color var(--zelo-dur-fast);
+  }
+
+  :global([data-surface="app"]) .profile-owner-form :global(button:active:not(:disabled)),
+  :global([data-surface="app"]) .profile-subuser :global(button:active:not(:disabled)),
+  :global([data-surface="app"]) .profile-danger :global(button:active:not(:disabled)),
+  :global([data-surface="app"]) .profile-danger :global(a:active) {
+    transform: scale(var(--zelo-press-scale));
+    transition-duration: var(--zelo-dur-fast);
+  }
+
+  :global([data-surface="app"]) .profile-owner-form :global([role="switch"]),
+  :global([data-surface="app"]) .profile-owner-form :global([role="switch"] > span) {
+    transition-duration: var(--zelo-dur-slow) !important;
+    transition-timing-function: var(--zelo-ease-spring) !important;
+  }
+
+  @media (max-width: 640px) {
+    :global([data-surface="app"]) .profile-header {
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    :global([data-surface="app"]) .profile-header > div,
+    :global([data-surface="app"]) .profile-header :global(.mb) {
+      width: 100%;
+    }
+
+    :global([data-surface="app"]) .profile-tab-panel > section,
+    :global([data-surface="app"]) .profile-card {
+      padding: 18px;
+    }
+
+    :global([data-surface="app"]) .profile-owner-form :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"])),
+    :global([data-surface="app"]) .profile-owner-form :global(select),
+    :global([data-surface="app"]) .profile-owner-form :global(textarea) {
+      min-height: 48px;
+      font-size: 16px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global([data-surface="app"]) .profile-owner-form :global(button),
+    :global([data-surface="app"]) .profile-subuser :global(button),
+    :global([data-surface="app"]) .profile-danger :global(button),
+    :global([data-surface="app"]) .profile-danger :global(a),
+    :global([data-surface="app"]) .profile-owner-form :global([role="switch"]),
+    :global([data-surface="app"]) .profile-owner-form :global([role="switch"] > span) {
+      transition-duration: 0.01ms !important;
+    }
   }
 </style>
