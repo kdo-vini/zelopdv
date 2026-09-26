@@ -27,7 +27,7 @@
   import { MESA_SNAPSHOT, findMergeableComandaItem } from '$lib/finance/offlineMesas';
   import { newMesaPayments, projectStockProducts } from '$lib/finance/offlineProjection';
   import { zeloSurface } from '$lib/theme/surface';
-  import { MoneyText, ProductTile, SearchField, UnderlineTabs } from '$lib/components/zelo';
+  import { MoneyText, MorphButton, ProductTile, SearchField, UnderlineTabs } from '$lib/components/zelo';
   import { Button } from '$lib/components/ui/button';
   import { ArrowLeftRight, ChefHat, ChevronLeft, ChevronUp, Minus, NotebookPen, Plus, Receipt, ShoppingCart, SlidersHorizontal, Split, Users, X } from 'lucide-svelte';
 
@@ -2174,7 +2174,117 @@
 {/if}
 
 <!-- ============================ FECHAR MESA MODAL ============================ -->
-{#if closeModalOpen && comanda}
+{#if closeModalOpen && comanda && $zeloSurface}
+  <!-- Zelo Design System: "Fechar mesa" sheet (mockup 01). Same state and handlers as the legacy modal below. -->
+  <div class="zs-overlay" on:click|self={fecharCloseModal} role="presentation">
+    <div class="zs-sheet" role="dialog" aria-modal="true" aria-labelledby="close-title">
+      <header class="zs-head">
+        <div>
+          <p class="zc-eyebrow">Mesa {String(mesa.numero).padStart(2, '0')} · {itens.length} {itens.length === 1 ? 'item' : 'itens'}</p>
+          <h2 id="close-title" class="zc-heading">Fechar mesa</h2>
+        </div>
+        <button type="button" class="zc-icon-btn zs-close" on:click={fecharCloseModal} disabled={closing} aria-label="Fechar"><X size={18} strokeWidth={1.75} /></button>
+      </header>
+
+      <div class="zs-body">
+        <div class="zs-sum">
+          <div class="zc-ln"><span>Subtotal</span><MoneyText value={subtotal} size="sm" /></div>
+          {#if couvert > 0}<div class="zc-ln"><span>Couvert</span><span class="zc-num">+ <MoneyText value={couvert} size="sm" /></span></div>{/if}
+          {#if desconto > 0}<div class="zc-ln ok"><span>Desconto</span><span class="zc-num">− <MoneyText value={desconto} size="sm" /></span></div>{/if}
+          {#if taxaPct > 0}<div class="zc-ln"><span>Taxa de serviço {taxaPct}%</span><span class="zc-num">+ <MoneyText value={taxaValor} size="sm" /></span></div>{/if}
+          <div class="zc-total"><span>Total a pagar</span><MoneyText value={total} size="lg" /></div>
+          {#if comanda.num_pessoas > 1}
+            <p class="zc-per">{comanda.num_pessoas} pessoas · <MoneyText value={total / comanda.num_pessoas} size="sm" /> cada</p>
+          {/if}
+        </div>
+
+        {#if !multiPag}
+          <div>
+            <p class="zs-label">Forma de pagamento</p>
+            <PaymentMethodGrid
+              zelo
+              methods={SELECTABLE_PAYMENT_METHODS}
+              selectedId={formaPagamento}
+              showShortcuts={false}
+              ariaLabel="Forma de pagamento da mesa"
+              on:select={(event) => { formaPagamento = event.detail; onFormaChange(); }}
+            />
+          </div>
+
+          {#if formaPagamento === 'dinheiro'}
+            <div class="zs-panel">
+              <label class="zs-field">
+                <span>Valor recebido</span>
+                <span class="zs-money"><small aria-hidden="true">R$</small><input type="number" inputmode="decimal" min="0" step="0.01" bind:value={valorRecebido} placeholder={total.toFixed(2)} /></span>
+              </label>
+              <div class="zs-change" class:falta={faltaPagar > 0}>
+                <span>{faltaPagar > 0 ? 'Falta' : 'Troco'}</span>
+                <MoneyText value={faltaPagar > 0 ? faltaPagar : troco} size="md" />
+              </div>
+            </div>
+          {/if}
+
+          {#if formaPagamento === 'fiado'}
+            <label class="zs-field">
+              <span>Cliente do fiado *</span>
+              <select bind:value={pessoaFiadoId} class="zs-input">
+                <option value={null}>— Selecione —</option>
+                {#each pessoas as p}
+                  <option value={p.id}>{p.nome}{p.saldo_fiado > 0 ? ` (saldo R$ ${Number(p.saldo_fiado).toFixed(2)})` : ''}</option>
+                {/each}
+              </select>
+            </label>
+          {/if}
+
+          <button type="button" class="zs-split" on:click={ativarMulti}><Split size={18} strokeWidth={1.75} aria-hidden="true" />Dividir entre formas de pagamento</button>
+        {:else}
+          <div class="zs-multi">
+            <div class="zs-multi-head">
+              <p class="zs-label">Dividir conta</p>
+              <button type="button" class="zs-back" on:click={cancelarMulti}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />Forma única</button>
+            </div>
+            <div class="zs-multi-add">
+              <PaymentMethodSelect zelo methods={SELECTABLE_PAYMENT_METHODS} bind:value={novoPagForma} ariaLabel="Forma do pagamento dividido" on:change={onNovoPagFormaChange} />
+              <span class="zs-money"><small aria-hidden="true">R$</small><input type="number" inputmode="decimal" min="0" step="0.01" bind:value={novoPagValor} placeholder="0,00" aria-label="Valor" /></span>
+              <button type="button" class="zs-chip" on:click={preencherRestante} title="Preencher com o valor restante">Restante</button>
+              <Button variant="outlined" size="touch" onclick={addPagamento}><Plus strokeWidth={1.75} />Adicionar</Button>
+            </div>
+            {#if novoPagForma === 'fiado'}
+              <select class="zs-input" bind:value={novoPagPessoaId} aria-label="Cliente do fiado">
+                <option value="">— Cliente do fiado —</option>
+                {#each pessoas as p}
+                  <option value={p.id}>{p.nome}{p.saldo_fiado > 0 ? ` (saldo R$ ${Number(p.saldo_fiado).toFixed(2)})` : ''}</option>
+                {/each}
+              </select>
+            {/if}
+            {#if erroPagamento}<p class="zs-error" role="alert">{erroPagamento}</p>{/if}
+            {#if pagamentos.length > 0}
+              <ul class="zs-list">
+                {#each pagamentos as p, i (i)}
+                  <li>
+                    <span class="zs-list-nm">{formatPaymentMethod(p.forma)}{#if p.forma === 'fiado'}<small>{pessoas.find(x => x.id === p.pessoaId)?.nome || ''}</small>{/if}</span>
+                    <MoneyText value={p.valor} size="sm" />
+                    <button type="button" on:click={() => removerPagamento(i)} aria-label="Remover"><X size={16} strokeWidth={1.75} /></button>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+            <div class="zc-ln"><span>Soma</span><MoneyText value={somaPagamentos} size="sm" /></div>
+            <div class="zc-ln" class:warn={restantePagamento > 0}><span>{restantePagamento > 0 ? 'Falta' : 'Restante'}</span><MoneyText value={restantePagamento} size="sm" /></div>
+            {#if trocoMulti > 0}<div class="zc-ln strong"><span>Troco</span><MoneyText value={trocoMulti} size="sm" /></div>{/if}
+          </div>
+        {/if}
+      </div>
+
+      <footer class="zs-foot">
+        <Button variant="outlined" size="touch" class="zs-cancel" onclick={fecharCloseModal} disabled={closing}>Cancelar</Button>
+        <MorphButton state={closing ? 'loading' : 'idle'} size="cta" align="start" loadingLabel="Fechando a mesa…" onclick={fecharMesa}>
+          Confirmar<span class="zs-cta-long">&nbsp;pagamento</span><MoneyText value={total} class="zs-cta-total" />
+        </MorphButton>
+      </footer>
+    </div>
+  </div>
+{:else if closeModalOpen && comanda}
   <div class="modal-overlay" on:click|self={fecharCloseModal} role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="close-title">
       <h2 id="close-title" class="modal-title">Fechar Mesa {mesa.numero}</h2>
@@ -3966,6 +4076,78 @@
     .zc-cartbar :global(.zc-cartbar-t) { margin-left: auto; font-size: 18px; white-space: nowrap; }
     .zc-cartbar :global(.zc-cartbar-t small) { color: inherit; opacity: 0.62; }
     .zc-cartbar-c { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 9px; background: color-mix(in srgb, var(--primary-text) 12%, transparent); }
+  }
+
+  /* ─── Mesas modals on the Zelo surface ─────────────────────────────────────
+     "Fechar mesa" has its own branch (.zs-*). The other modals (pagamento parcial, pré-conta,
+     trocar de mesa, recibo) keep their markup and get the sheet look here, scoped to the app
+     surface so the legacy modals are untouched. */
+  .zs-overlay { position: fixed; inset: 0; z-index: 1150; display: flex; align-items: center; justify-content: center; padding: 24px; background: color-mix(in srgb, var(--shadow-color) 42%, transparent); }
+  .zs-sheet { width: min(560px, 100%); max-height: min(92vh, 900px); display: flex; flex-direction: column; overflow: hidden; border-radius: var(--zelo-radius-sheet); background: var(--bg-panel); color: var(--text-main); font-family: var(--zelo-font-ui); box-shadow: var(--shadow-modal); }
+  .zs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 22px 24px 8px; }
+  .zs-close { display: grid; }
+  .zs-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 16px; padding: 8px 24px 18px; }
+  .zs-sum { padding: 12px 16px 14px; border-radius: var(--zelo-radius-card); background: var(--bg-sunken); }
+  .zs-sum .zc-total { margin-top: 6px; }
+  .zs-label { margin: 0 0 10px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  .zs-panel { display: flex; align-items: flex-end; gap: 12px; padding: 14px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); }
+  .zs-panel .zs-field { flex: 1; }
+  .zs-field { display: flex; flex-direction: column; gap: 6px; font: var(--type-label); letter-spacing: var(--type-label-tracking); color: var(--text-label); }
+  .zs-money { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-input); }
+  .zs-money:focus-within, .zs-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--focus); }
+  .zs-money small { font: var(--type-label); color: var(--text-muted); }
+  .zs-money input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; color: var(--text-main); font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
+  .zs-money input::-webkit-inner-spin-button, .zs-money input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .zs-input { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); background: var(--bg-input); color: var(--text-main); font: var(--type-body); outline: none; }
+  .zs-change { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding: 0 4px 6px; font: var(--type-label); color: var(--text-label); }
+  .zs-change.falta { color: var(--status-warning-text); }
+  .zs-change.falta :global(.money small) { color: inherit; }
+  .zs-split { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border: 1px dashed var(--border-strong); border-radius: var(--zelo-radius-control); font: var(--type-label); color: var(--text-label); }
+  .zs-split:hover { border-color: var(--primary); color: var(--text-main); }
+  .zs-multi { display: flex; flex-direction: column; gap: 10px; }
+  .zs-multi-head { display: flex; align-items: center; justify-content: space-between; }
+  .zs-multi-head .zs-label { margin: 0; }
+  .zs-back { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px 0 6px; border-radius: var(--zelo-radius-seg); font: var(--type-label); color: var(--text-muted); }
+  .zs-back:hover { background: var(--bg-sunken); color: var(--text-main); }
+  .zs-multi-add { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+  .zs-chip { height: 48px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: var(--zelo-radius-control); font: var(--type-label); color: var(--text-label); }
+  .zs-chip:hover { border-color: var(--border-strong); color: var(--text-main); }
+  .zs-error { margin: 0; padding: 10px 12px; border: 1px solid var(--status-error-border); border-radius: var(--zelo-radius-control); background: var(--status-error-bg); color: var(--status-error-text); font: var(--type-caption); font-size: 13px; }
+  .zs-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); overflow: hidden; }
+  .zs-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; }
+  .zs-list li + li { border-top: 1px solid var(--border-subtle); }
+  .zs-list-nm { font: var(--type-body-strong); }
+  .zs-list-nm small { display: block; font: var(--type-caption); color: var(--text-muted); }
+  .zs-list button { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--zelo-radius-seg); color: var(--text-muted); }
+  .zs-list button:hover { background: var(--status-error-bg); color: var(--status-error-text); }
+  .zc-ln.warn { color: var(--status-warning-text); }
+  .zc-ln.strong { font-weight: 600; color: var(--text-main); }
+  .zs-foot { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 14px 24px 20px; border-top: 1px solid var(--border-subtle); }
+  .zs-foot :global(.zs-cancel) { height: 64px; padding: 0 22px; border-radius: var(--zelo-radius-cta); font-weight: 600; }
+  .zs-foot :global(.zs-cta-total) { margin-left: auto; font-size: 19px; }
+  .zs-foot :global(.zs-cta-total small) { color: inherit; opacity: 0.72; }
+
+  :global([data-surface="app"]) .modal-overlay { background: color-mix(in srgb, var(--shadow-color) 42%, transparent); backdrop-filter: none; }
+  :global([data-surface="app"]) .modal { border: 1px solid var(--border-card); border-radius: var(--zelo-radius-sheet); background: var(--bg-panel); color: var(--text-main); font-family: var(--zelo-font-ui); box-shadow: var(--shadow-modal); }
+  :global([data-surface="app"]) .modal-title { font: var(--type-heading); letter-spacing: var(--type-heading-tracking); color: var(--text-main); }
+  :global([data-surface="app"]) .modal-subtitle { font: var(--type-body); color: var(--text-muted); }
+  :global([data-surface="app"]) .modal .btn-primary { border-radius: var(--zelo-radius-control); background: var(--primary); color: var(--primary-text); font: var(--type-label); font-weight: 600; box-shadow: none; }
+  :global([data-surface="app"]) .modal .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+  :global([data-surface="app"]) .modal .btn-secondary { border-radius: var(--zelo-radius-control); border: 1px solid var(--border-subtle); background: var(--bg-panel); color: var(--text-main); font: var(--type-label); }
+  :global([data-surface="app"]) .modal .field-label { font: var(--type-label); color: var(--text-label); }
+  :global([data-surface="app"]) .modal .field input, :global([data-surface="app"]) .modal .field select { border-radius: var(--zelo-radius-control); border-color: var(--border-subtle); background: var(--bg-input); color: var(--text-main); }
+  :global([data-surface="app"]) .modal .field input:focus, :global([data-surface="app"]) .modal .field select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--focus); outline: none; }
+  @media (max-width: 767px) {
+    .zs-overlay { align-items: flex-end; padding: 0; }
+    .zs-sheet { width: 100%; max-height: calc(100dvh - 12px); border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0; }
+    .zs-head { padding: 16px 16px 4px; }
+    .zs-body { padding: 6px 16px 14px; }
+    .zs-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+    .zs-foot :global(.zs-cancel) { height: 56px; padding: 0 16px; }
+    .zs-foot :global(.mb) { --mb-h: 56px; }
+    .zs-cta-long { display: none; }
+    .zs-multi-add { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    :global([data-surface="app"]) .modal { border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0; }
   }
   @media (prefers-reduced-motion: reduce) { .zc-cart, .zc-cartbar { transition: none; } }
 </style>
