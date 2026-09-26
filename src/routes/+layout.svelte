@@ -137,6 +137,7 @@
   $: isPricingPage = path === '/precificacao';
   $: isExtensoesPage = path === '/extensoes' || path.startsWith('/extensoes/');
   $: isContactPage = path === '/contato';
+  $: isZeloImpressaoPage = path === '/zelo-impressao';
   $: isVsPlanilhaPage = path === '/vs-planilha';
   $: isCompetitorComparisonPage = path.startsWith('/vs-');
   $: isReferralPage = path.startsWith('/indica/');
@@ -462,7 +463,7 @@
 {:else}
 <div class="flex flex-col min-h-screen bg-app-base overflow-x-hidden">
   
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isZeloImpressaoPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout}
   <header class="border-b bg-header-base backdrop-blur-sm sticky top-0 z-50 transition-colors duration-500">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       
@@ -638,11 +639,11 @@
   {/if}
   {/if}
 
-  <main class="flex-1 mx-auto w-full {$page.url.pathname === '/' || $page.url.pathname === '/landing' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isContactPage || isCompetitorComparisonPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
+  <main class="flex-1 mx-auto w-full {$page.url.pathname === '/' || $page.url.pathname === '/landing' || isSegmentMarketingPage || isBlogPage || isPricingPage || isExtensoesPage || isContactPage || isZeloImpressaoPage || isCompetitorComparisonPage || isReferralPage || isAuthPage || $page.error ? 'max-w-full p-0' : 'max-w-6xl px-4 py-6'}">
     <slot />
   </main>
 
-  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout && !$page.error}
+  {#if $page.url.pathname !== '/' && $page.url.pathname !== '/landing' && !isSegmentMarketingPage && !isBlogPage && !isPricingPage && !isExtensoesPage && !isContactPage && !isZeloImpressaoPage && !isCompetitorComparisonPage && !isReferralPage && !isAuthPage && !hasSidebarLayout && !$page.error}
   <footer class="mt-auto border-t py-4" style="background-color: var(--bg-panel); border-color: var(--border-subtle);">
     <div class="max-w-6xl mx-auto px-4">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-3">

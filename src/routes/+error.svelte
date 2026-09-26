@@ -1,5 +1,6 @@
 <script>
   import { page } from '$app/stores';
+  import { SearchX, Lock, KeyRound, Ban, Cog, CircleAlert, LayoutDashboard, MessageCircle, Code, Check, Copy, ArrowLeft } from 'lucide-svelte';
 
   $: status = $page.status;
   $: message = $page.error?.message ?? 'Erro interno do servidor';
@@ -17,9 +18,9 @@
 
   // 4xx: ícone e título por código
   $: icon4xx =
-    status === 404 ? 'search_off' :
-    status === 403 ? 'lock' :
-    status === 401 ? 'key_off' : 'block';
+    status === 404 ? SearchX :
+    status === 403 ? Lock :
+    status === 401 ? KeyRound : Ban;
   $: title4xx =
     status === 404 ? 'Página não encontrada.' :
     status === 403 ? 'Acesso negado.' :
@@ -49,10 +50,6 @@
 
 <svelte:head>
   <title>Erro {status} — Zelo PDV</title>
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-  />
 </svelte:head>
 
 <div class="error-page">
@@ -68,10 +65,10 @@
         <div class="icon-wrap">
           <div class="icon-glow"></div>
           <div class="icon-card">
-            <span class="material-symbols-outlined icon-main">settings_suggest</span>
+            <Cog class="icon-main" size={56} strokeWidth={1.75} aria-hidden="true" />
           </div>
           <div class="icon-badge">
-            <span class="material-symbols-outlined">priority_high</span>
+            <CircleAlert class="badge-icon" size={20} strokeWidth={1.75} aria-hidden="true" />
           </div>
         </div>
 
@@ -88,7 +85,7 @@
 
         <div class="error-btns">
           <a href={backHref} class="btn-back">
-            <span class="material-symbols-outlined">dashboard</span>
+            <LayoutDashboard class="btn-icon" size={20} strokeWidth={1.75} aria-hidden="true" />
             {backLabel}
           </a>
           <a
@@ -97,7 +94,7 @@
             rel="noopener"
             class="btn-wa"
           >
-            <span class="material-symbols-outlined">chat</span>
+            <MessageCircle class="btn-icon" size={20} strokeWidth={1.75} aria-hidden="true" />
             Enviar erro para o Suporte
           </a>
         </div>
@@ -110,7 +107,7 @@
               <span class="pulse-dot"></span>
               <span class="th-label">Relatório Técnico</span>
             </div>
-            <span class="material-symbols-outlined th-icon">code</span>
+            <Code class="th-icon" size={18} strokeWidth={1.75} aria-hidden="true" />
           </div>
           <div class="tech-body">
             <div class="tech-fields">
@@ -136,13 +133,13 @@
               </div>
             </div>
             <button class="btn-copy" on:click={copyLogs}>
-              <span class="material-symbols-outlined">{copied ? 'check' : 'content_copy'}</span>
+              <svelte:component this={copied ? Check : Copy} class="copy-icon" size={20} strokeWidth={1.75} aria-hidden="true" />
               {copied ? 'Copiado!' : 'Copiar logs para a área de transferência'}
             </button>
           </div>
         </div>
         <div class="security-tag">
-          <span class="material-symbols-outlined">lock</span>
+          <Lock class="sec-icon" size={14} strokeWidth={1.75} aria-hidden="true" />
           <span>Conexão segura — seus dados estão protegidos</span>
         </div>
       </div>
@@ -158,7 +155,7 @@
       <div class="icon-wrap">
         <div class="icon-glow"></div>
         <div class="icon-card">
-          <span class="material-symbols-outlined icon-main">{icon4xx}</span>
+          <svelte:component this={icon4xx} class="icon-main" size={56} strokeWidth={1.75} aria-hidden="true" />
         </div>
         <div class="icon-badge icon-badge--warn">
           <span class="badge-status">{status}</span>
@@ -172,7 +169,7 @@
 
       <div class="error-btns" style="justify-content: center;">
         <a href={backHref} class="btn-back">
-          <span class="material-symbols-outlined">arrow_back</span>
+          <ArrowLeft class="btn-icon" size={20} strokeWidth={1.75} aria-hidden="true" />
           {backLabel}
         </a>
       </div>
@@ -282,11 +279,7 @@
     border-radius: 1.5rem;
     border: 1px solid rgba(51, 65, 85, 0.2);
   }
-  .icon-main {
-    color: var(--primary);
-    font-size: 3.5rem;
-    font-variation-settings: 'FILL' 1;
-  }
+  .error-page :global(.icon-main) { color: var(--primary); }
   .icon-badge {
     position: absolute; top: -0.5rem; right: -0.5rem;
     width: 2.5rem; height: 2.5rem;
@@ -295,7 +288,8 @@
     border-radius: 0.75rem;
     box-shadow: 0 10px 15px rgba(14, 165, 233, 0.2);
   }
-  .icon-badge .material-symbols-outlined { color: white; font-size: 1.25rem; }
+  .error-page :global(.badge-icon) { color: white; }
+  .error-page :global(.btn-icon) { flex-shrink: 0; }
 
   /* Texto */
   .error-text { display: flex; flex-direction: column; gap: 1rem; }
@@ -365,7 +359,7 @@
     letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--text-muted);
   }
-  .th-icon { color: var(--text-muted); font-size: 1.125rem; }
+  .error-page :global(.th-icon) { color: var(--text-muted); }
 
   .tech-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
   .tech-fields { display: flex; flex-direction: column; gap: 1rem; }
@@ -402,15 +396,15 @@
     font-family: 'Inter', sans-serif;
   }
   .btn-copy:hover { background: var(--bg-panel); }
-  .btn-copy .material-symbols-outlined { color: var(--primary); font-size: 1.25rem; }
+  .error-page :global(.copy-icon) { color: var(--primary); }
 
   .security-tag {
     margin-top: 1rem;
     display: flex; align-items: center; justify-content: center; gap: 0.5rem;
     color: rgba(148, 163, 184, 0.4);
   }
-  .security-tag .material-symbols-outlined { font-size: 0.875rem; }
-  .security-tag span:last-child {
+  
+  .security-tag span {
     font-size: 0.625rem; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.05em;
   }
