@@ -6,6 +6,8 @@
   import { claimStoredReferral, getStoredReferralAttribution } from '$lib/referrals/client';
   import { getStoredAcquisitionOrigin } from '$lib/attribution/client';
   import { identifyPostHogUser } from '$lib/posthogClient';
+  import { zeloSurface } from '$lib/theme/surface';
+  import ZeloMark from '$lib/components/zelo/ZeloMark.svelte';
 
   let status = 'Autenticando...';
 
@@ -120,13 +122,61 @@
   });
 </script>
 
+{#if $zeloSurface}
+  <!-- Zelo Design System (Fase 4): full-height brand page, same lockup as AuthLayout's
+       zelo branch. Presentation only — {status} and the redirect timing are untouched. -->
+  <div class="cb-page">
+    <div class="cb-brand">
+      <span class="cb-mark"><ZeloMark size={26} /></span>
+      <span class="cb-word">Zelo<small>PDV</small></span>
+    </div>
+    <div class="cb-center">
+      <span class="cb-ring" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9" opacity=".22" />
+          <path d="M12 3a9 9 0 0 1 9 9" />
+        </svg>
+      </span>
+      <p class="cb-text type-body-strong" aria-live="polite">{status}</p>
+    </div>
+  </div>
+{:else}
 <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-app);">
   <div style="text-align:center;color:var(--text-muted);font-size:0.95rem;">
     <div style="width:32px;height:32px;border:3px solid var(--border-subtle);border-top-color:var(--primary);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 1rem;"></div>
     {status}
   </div>
 </div>
+{/if}
 
 <style>
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Zelo branch only (brand surface: navy bg, white ink/actions). */
+  .cb-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 40px 16px;
+    background: var(--bg-app);
+    color: var(--text-main);
+    font-family: var(--zelo-font-ui);
+  }
+  .cb-brand { display: inline-flex; align-items: center; gap: 12px; }
+  .cb-mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--primary); color: var(--primary-text); }
+  .cb-word { font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  .cb-word small { margin-left: 6px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); color: var(--text-muted); }
+  .cb-center { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 12vh; }
+  .cb-ring { width: 56px; height: 56px; border-radius: 50%; background: var(--bg-sunken); display: grid; place-items: center; }
+  .cb-ring svg { width: 28px; height: 28px; animation: cb-spin 860ms linear infinite; }
+  .cb-text { margin: 0; }
+  @keyframes cb-spin { to { transform: rotate(360deg); } }
+  /* Reduced motion: the ring keeps turning (it communicates progress), just slower — same
+     exception as MorphButton's spinner (docs/DESIGN_SYSTEM.md → Movimento reduzido). */
+  @media (prefers-reduced-motion: reduce) {
+    .cb-ring svg { animation-duration: 1600ms; }
+  }
 </style>

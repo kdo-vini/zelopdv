@@ -9,6 +9,9 @@
   import { captureAcquisitionOrigin, getStoredAcquisitionOrigin } from '$lib/attribution/client';
   import { capturePostHogEvent } from '$lib/posthogClient';
   import { onMount } from 'svelte';
+  import { zeloSurface } from '$lib/theme/surface';
+  import MorphButton from '$lib/components/zelo/MorphButton.svelte';
+  import { CheckCircle2 } from 'lucide-svelte';
 
   let email = '';
   let password = '';
@@ -16,6 +19,11 @@
   let errorMessage = '';
   let successMessage = '';
   let showPassword = false;
+
+  // Zelo Design System: derived only from the state above (presentation only,
+  // see docs/DESIGN_SYSTEM.md → Autenticação). Errors bring the button back to
+  // idle; `.auth-error` below still carries the message.
+  $: morphState = loading && successMessage ? 'success' : loading ? 'loading' : 'idle';
 
   onMount(() => {
     persistReferralAttributionFromUrl();
@@ -96,7 +104,11 @@
 
 <AuthLayout title="Criar conta" subtitle="Teste grátis por 14 dias. Sem cartão, sem cobrança automática.">
   {#if successMessage}
-    <div class="auth-success">{successMessage}</div>
+    {#if $zeloSurface}
+      <div class="auth-success zauth-ok"><CheckCircle2 size={18} strokeWidth={1.75} aria-hidden="true" />{successMessage}</div>
+    {:else}
+      <div class="auth-success">{successMessage}</div>
+    {/if}
   {/if}
   {#if errorMessage}
     <div class="auth-error">{@html errorMessage}</div>
@@ -140,10 +152,22 @@
       </div>
     </div>
 
-    <button disabled={loading} class="auth-btn">
-      {#if loading}<span class="spinner"></span>{/if}
-      {loading ? 'Criando...' : 'Criar conta'}
-    </button>
+    {#if $zeloSurface}
+      <MorphButton
+        type="submit"
+        state={morphState}
+        size="touch"
+        label="Criar conta"
+        loadingLabel="Criando..."
+        successLabel="Conta criada"
+        class="zauth-submit"
+      />
+    {:else}
+      <button disabled={loading} class="auth-btn">
+        {#if loading}<span class="spinner"></span>{/if}
+        {loading ? 'Criando...' : 'Criar conta'}
+      </button>
+    {/if}
 
     <p class="auth-reassurance">Leva menos de 1 minuto · cancele quando quiser</p>
   </form>

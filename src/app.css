@@ -461,6 +461,14 @@
 .auth-card[data-surface="app"] .auth-divider::before,
 .auth-card[data-surface="app"] .auth-divider::after { background: var(--border-subtle); }
 
+/* /cadastro (Fase 4): "Criar conta" is a MorphButton (idle → loading → success);
+   the button itself is a foreign component, so its full-width override lives
+   here, scoped like the rest of this card. The success banner keeps
+   `.auth-success` for colour/radius/border and only adds the icon layout. */
+.auth-card[data-surface="app"] .zauth-submit { width: 100%; }
+.auth-card[data-surface="app"] .zauth-ok { display: flex; align-items: center; gap: 8px; font: var(--type-label); letter-spacing: var(--type-label-tracking); }
+.auth-card[data-surface="app"] .zauth-ok svg { flex: none; }
+
 /* Snowfall Animation */
 .snow-container {
   pointer-events: none;
