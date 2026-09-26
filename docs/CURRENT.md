@@ -92,6 +92,7 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     `attr(data-cap)`, que o markup nunca define), datas estourando e campo
     "Descrição" deslocado em Despesas, ícones esmagados em Pessoas.
     Harness: `LISTS=1` e `EVAL`.
+  - **Mockup 04 — Relatórios** gerado (`docs/design-system/mockups/04-relatorios.html`), aguardando aprovação do dono antes de implementar. Propõe a paleta de gráficos do Design System (também para `chartColors.js`).
   - Dono aprovou o visual interno (2026-09-26). **Por último:** refazer as
     capturas da landing (hero, "Vendeu bem…", cards, `PhoneShot`) com a UI nova.
 
