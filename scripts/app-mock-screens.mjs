@@ -8,11 +8,6 @@
  *   BASE=http://localhost:5175 OUT=/tmp/app ADD="X-Bacon,X-Burger" KEYS=F9 VP=390x844 OPEN_CART=1 node scripts/app-mock-screens.mjs
  * Env: ROUTE (default /app), QS (default ?tema=novo; "" for legacy), ADD (tabs/radios/buttons to click by accessible name,
  * in order), KEYS (keys to press after), OPEN_CART, VP (WxH), OUT (png path without extension), CHROMIUM_PATH,
-<<<<<<< Updated upstream
- * STEPS (after the rest: comma list of `key:<Key>`, `click:<accessible name>`, `wait:<ms>`), MOTION=1 (real motion),
- * NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
- * BILLING=1 mocks the local Pix create/status endpoints for subscription screenshots.
-=======
  * STEPS (after the rest: comma list of `key:<Key>`, `click:<accessible name>`, `type:<text>` (keyboard.type on
  * whatever is focused), `wait:<ms>`), MOTION=1 (real motion), NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
  * WIZARD=1: empresa_perfil comes back with empty nome_exibicao/contato (so /perfil?msg=complete opens the
@@ -21,7 +16,7 @@
  * QS is appended with `&` instead of its own `?`.
  * SLOW=<ms>: delays writes to a table (default empresa_perfil, override with SLOW_TABLE) so a loading state is
  * screenshottable. No effect when absent.
->>>>>>> Stashed changes
+ * BILLING=1 mocks the local Pix create/status endpoints for subscription screenshots.
  * LOAD_STATE (default networkidle; use domcontentloaded for pages with persistent connections).
  * WAIT_AFTER (milliseconds after navigation; default 2500).
  * docs/DESIGN_SYSTEM.md → Verificação.
@@ -134,7 +129,6 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   }
   return json({});
 });
-<<<<<<< Updated upstream
 if (process.env.BILLING) {
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
   await ctx.route('**/api/billing/pix/create', (route) => route.fulfill({
@@ -153,10 +147,9 @@ if (process.env.BILLING) {
     contentType: 'application/json',
     body: JSON.stringify({ paymentId: 'pix_mock_1', status: 'pending', expiresAt }),
   }));
-=======
+}
 if (process.env.WIZARD) {
   await ctx.route('**/api/billing/start-trial', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
->>>>>>> Stashed changes
 }
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
