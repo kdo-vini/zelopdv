@@ -1,23 +1,25 @@
 import sys; sys.path.insert(0, '/home/user/zelopdv/docs/design-system/mockups')
-from _mk import fonts, i, money, sidebar, CSS, ICON
+from _mk import fonts, i, money, sidebar, CSS, ICON, IFOOD_LOGO, MOTION_CSS, MOTION_JS, morph_cta
 ICON.update({'bike':'<circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l4-8h5l3 8M10 9 8 5H5"/>','store':'<path d="M4 9l1.5-5h13L20 9"/><path d="M5 9v11h14V9"/><path d="M4 9h16"/>','print':'<path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v6H7z"/>','check':'<path d="m5 12 5 5 9-10"/>','refresh':'<path d="M20 11a8 8 0 0 0-14.9-4M4 13a8 8 0 0 0 14.9 4"/><path d="M5 3v4h4M19 21v-4h-4"/>','cal':'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>','pin':'<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/>','card':'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/>','fire':'<path d="M12 21a6 6 0 0 0 6-6c0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-2 2-3 5-3 8a6 6 0 0 0 6 6Z"/>'})
 ORD=[(1048,'pending_review','Revisar','ZeloMenu','delivery','Marina S.','14:32',3,87.4),(1047,'preparing','Preparando','iFood','delivery','Rafael','14:25',2,54.9),(1046,'accepted','Aceito','ZeloMenu','retirada','Joana','14:20',1,24.9),(1045,'ready','Pronto','Mesa 04','mesa','Mesa 04','14:12',4,112.0),(1044,'out_for_delivery','Saiu para entrega','ZeloMenu','delivery','Carlos','14:02',2,61.8)]
 def src_badge(s):
-    ic={'iFood':'bag','ZeloMenu':'store'}.get(s,'table')
+    if s=='iFood':
+        return f'<span class="srcw"><span class="ifmark"><img src="{IFOOD_LOGO}" alt=""></span><span class="src src-ifood">iFood</span></span>'
+    ic={'ZeloMenu':'store'}.get(s,'table')
     return f'<span class="src src-{s.split()[0].lower()}">{i(ic,13)}{s}</span>'
 def stpill(st,lab):
     tone={'pending_review':'warn','ready':'ok','out_for_delivery':'info'}.get(st,'neutral')
     return f'<span class="spill t-{tone}"><i></i>{lab}</span>'
 def qcard(o,on=False):
     n,st,lab,src,mode,cli,hr,q,tot=o
-    return f'''<button class="qc {"on" if on else ""}"><span class="qc-top"><span class="qc-n">#{n}</span>{stpill(st,lab)}</span><span class="qc-cli">{cli}</span><span class="qc-meta">{src_badge(src)}<span>{i("clock",13)}{hr}</span><span>{q} {"item" if q==1 else "itens"}</span></span>{money(tot,"qc-t")}</button>'''
+    return f'''<button class="qc {"on" if on else ""}" data-n="{n}" data-cli="{cli}" data-tot="{tot}" data-src="{src}"><span class="qc-top"><span class="qc-n">#{n}</span>{stpill(st,lab)}</span><span class="qc-cli">{cli}</span><span class="qc-meta">{src_badge(src)}<span>{i("clock",13)}{hr}</span><span>{q} {"item" if q==1 else "itens"}</span></span>{money(tot,"qc-t")}</button>'''
 QUEUE=''.join(qcard(o,o[0]==1047) for o in ORD)
 ITEMS=[(2,'X-Bacon',29.9,'Pão: brioche · Adicionais: bacon extra'),(1,'Coca-Cola lata 350ml',6.5,None)]
-DET=f'''<section class="det"><header class="det-h"><div><p class="eyebrow">Pedido · iFood</p><h2 class="title">#1047</h2><p class="sub">{i("user",15)}Rafael<span class="dot-sep">·</span>{i("clock",15)}14:25 · há 12 min</p></div><div class="acts">{stpill("preparing","Preparando")}<button class="btn out">{i("print")}Reimprimir</button></div></header>
+DET=f'''<section class="det"><header class="det-h"><div><p class="eyebrow" id="d-src">Pedido · iFood</p><h2 class="title" id="d-n">#1047</h2><p class="sub">{i("user",15)}<span id="d-cli">Rafael</span><span class="dot-sep">·</span>{i("clock",15)}14:25 · há 12 min</p></div><div class="acts">{stpill("preparing","Preparando")}<button class="btn out">{i("print")}Reimprimir</button></div></header>
 <div class="codes"><span class="eyebrow">Códigos do iFood</span><span class="code"><small>Localizador</small><b>8421 3310</b></span><span class="code"><small>Retirada</small><b>4471</b></span></div>
 <div class="blocks"><div class="blk"><p class="eyebrow">{i("pin",13)} Entrega</p><p class="blk-v">Rua das Acácias, 120 · ap 32</p><p class="blk-s">Jardim América</p></div><div class="blk"><p class="eyebrow">{i("card",13)} Pagamento</p><p class="blk-v">Pago online · Crédito</p><p class="blk-s">Troco: não se aplica</p></div><div class="blk wide"><p class="eyebrow">Observações</p><p class="blk-v">Sem cebola no X-Bacon. Tocar o interfone 32.</p></div></div>
 <ul class="its">{''.join(f'<li><span class="its-q">{q}×</span><div><p class="its-nm">{nm}</p>{f"<p class=its-mod>{mod}</p>" if mod else ""}<p class="its-u">{money(p,"sm")} cada</p></div>{money(p*q,"strong")}</li>' for q,nm,p,mod in ITEMS)}</ul>
-<div class="det-f"><div class="ln"><span>Itens</span>{money(sum(q*p for q,_,p,_ in ITEMS),"sm")}</div><div class="ln"><span>Taxa de entrega</span><span class="num">+ {money(5,"sm")}</span></div><div class="tot"><span>Total</span>{money(sum(q*p for q,_,p,_ in ITEMS)+5,"xl")}</div><div class="det-acts"><button class="btn quiet danger">Cancelar pedido</button><button class="cta slim">Marcar como pronto{i("check",20)}</button></div></div></section>'''
+<div class="det-f"><div class="ln"><span>Itens</span>{money(sum(q*p for q,_,p,_ in ITEMS),"sm")}</div><div class="ln"><span>Taxa de entrega</span><span class="num">+ {money(5,"sm")}</span></div><div class="tot"><span>Total</span><span class="money xl"><small>R$</small><span id="d-tot">71,30</span></span></div><div class="det-acts"><button class="btn quiet danger">Cancelar pedido</button>{morph_cta(i("check",20)+"Marcar como pronto","cta slim")}</div></div></section>'''
 PED_D=f'''<div class="frame d"><div class="app">{sidebar('Pedidos')}<main class="main ped">
 <header class="ph"><div><p class="eyebrow">PDV / Pedidos</p><h1 class="title">Fila de Pedidos</h1></div><div class="sum"><span class="pill"><b class="n">5</b> na fila</span><span class="pill pill-fechando"><i></i>1 para revisar</span><button class="btn out">{i("refresh")}Atualizar</button></div></header>
 <div class="ped-body"><aside class="queue">{QUEUE}</aside>{DET}</div></main></div></div>'''
@@ -28,7 +30,7 @@ def kcard(t,s,mins,its,st):
     late=' late' if mins>=15 else ''
     rows=''.join(f'<li class="{"done" if d else ""}"><span class="kq">{q}×</span><div><p>{nm}</p>{f"<small>{ob}</small>" if ob else ""}</div><button class="kmark">{i("check",18) if d else ""}{"Pronto" if d else "Marcar"}</button></li>' for q,nm,d,ob in its)
     done=sum(1 for *_ ,d,_ in [(0,0,x[2],0) for x in its] if d)
-    btn=f'<button class="cta slim">{i("fire",20)}Iniciar preparo</button>' if st=='accepted' else f'<button class="cta slim">{i("check",20)}Pedido pronto</button>'
+    btn=morph_cta(i("fire",20)+"Iniciar preparo","cta slim") if st=='accepted' else morph_cta(i("check",20)+"Pedido pronto","cta slim")
     return f'''<article class="kc{late}"><header><div><h3>{t}</h3><p>{s}</p></div><span class="kt">{mins}<small>min</small></span></header><p class="kprog">{sum(1 for x in its if not x[2])} de {len(its)} pendentes</p><ul>{rows}</ul>{btn}</article>'''
 COZ_D=f'''<div class="frame d"><div class="app">{sidebar('Cozinha')}<main class="main coz">
 <header class="ph"><div><p class="eyebrow">PDV / Cozinha</p><h1 class="title">Cozinha</h1></div><div class="sum"><span class="pill"><b class="n">3</b> em preparo</span><span class="pill pill-livre"><i></i><b class="n">2</b> prontos</span><span class="pill"><b class="n">7</b> itens abertos</span></div></header>
@@ -47,7 +49,7 @@ EXTRA='''
 .qc{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:14px;background:var(--white);border:1px solid var(--line);text-align:left}.qc.on{border-color:var(--navy);box-shadow:0 0 0 1px var(--navy)}
 .qc-top{display:flex;justify-content:space-between;align-items:center}.qc-n{font:600 18px/1 var(--num);letter-spacing:-.02em}.qc-cli{font:500 14.5px var(--ui)}.qc-meta{display:flex;gap:10px;align-items:center;color:var(--muted);font:500 12px var(--num)}.qc-meta span{display:inline-flex;gap:4px;align-items:center}.qc .money{align-self:flex-end;margin-top:-26px}.qc-t{font-size:16px}
 .spill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;font:500 11.5px var(--ui);border:1px solid var(--line);color:var(--label);background:var(--white)}.spill i{width:6px;height:6px;border-radius:50%;background:var(--navy)}.spill.t-warn{background:var(--warnbg);border-color:var(--warnln);color:var(--warn)}.spill.t-warn i{background:var(--warndot)}.spill.t-ok{background:var(--okbg);border-color:var(--okln);color:var(--ok)}.spill.t-ok i{background:var(--ok)}.spill.t-info i{background:var(--muted)}
-.src{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:6px;background:var(--sunk);color:var(--label);font:500 11px var(--ui)}.src-ifood{background:var(--errbg);color:var(--err)}
+.src{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:6px;background:var(--sunk);color:var(--label);font:500 11px var(--ui)}.src-ifood{background:var(--errbg);color:var(--err)}.srcw{display:inline-flex;align-items:center;gap:5px}.ifmark{width:22px;height:22px;border-radius:50%;border:1px solid var(--line2);background:var(--white);display:grid;place-items:center;overflow:hidden}.ifmark img{width:82%;height:82%;object-fit:contain}.morph .mlayer{justify-content:center}
 .pill .n{font:500 13px var(--num);color:var(--ink)}
 .det{background:var(--white);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:0;margin-bottom:20px}.det-h{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 22px 14px;border-bottom:1px solid var(--line)}.det .acts{display:flex;gap:8px;align-items:center}
 .codes{display:flex;align-items:center;gap:10px;padding:12px 22px;background:var(--sunk)}.code{display:inline-flex;flex-direction:column;padding:6px 12px;border-radius:10px;background:var(--white);border:1px solid var(--line)}.code small{font:400 11px var(--ui);color:var(--muted)}.code b{font:600 16px var(--num);letter-spacing:.04em}
@@ -63,11 +65,24 @@ EXTRA='''
 .kmark{display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line);font:500 13px var(--ui)}.kc li.done p{color:var(--muted);text-decoration:line-through}.kc li.done .kmark{border-color:var(--okln);background:var(--okbg);color:var(--ok)}
 .kc .cta{margin-top:4px}.kcol.ready .kr{padding:14px;border-radius:14px;border:1px solid var(--okln);background:var(--okbg);margin-bottom:8px}.kr h3{font:600 16px var(--num);color:var(--ink)}.kr p{font:400 12.5px var(--ui);color:var(--ok);margin-top:3px}
 '''
-html=f'''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mockup · Pedidos e Cozinha</title><style>{fonts}{CSS}{EXTRA}</style></head><body>
+html=f'''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mockup · Pedidos e Cozinha</title><style>{fonts}{CSS}{EXTRA}{MOTION_CSS}</style></head><body>
 <header class="doc"><p class="eyebrow">Zelo Design System · Fase 4 · mockup 02 de 06</p><h1>Pedidos e Cozinha</h1><p>Fila de pedidos (<code>/app/pedidos</code>) e painel de preparo (<code>/app/pedidos/cozinha</code>). Mesmas funções de hoje: status canônicos, origem (ZeloMenu, iFood, Mesa), códigos e cancelamento do iFood, reimprimir, agendados, marcar item pronto e o botão da próxima etapa. Bottom nav original do celular mantida.</p>
-<ol><li><b>Fila</b> — pedidos à esquerda (número em Mono, status, origem, cliente, horário, itens, total); detalhe à direita com entrega, pagamento/troco, observações, itens com modificadores e um único botão com a próxima etapa ("Aceitar pedido", "Iniciar preparo", "Marcar como pronto", "Saiu para entrega", "Concluir").</li><li><b>Cozinha</b> — clara e com letra maior para leitura à distância: agendados no topo, "Em preparo" em cartões com tempo corrido (âmbar a partir de 15 min) e marcação por item, "Prontos" ao lado.</li><li><b>Celular</b> — fila em cartões; cozinha em coluna única.</li></ol></header>
+<ol><li><b>Fila</b> — pedidos à esquerda (número em Mono, status, origem, cliente, horário, itens, total); detalhe à direita com entrega, pagamento/troco, observações, itens com modificadores e um único botão com a próxima etapa ("Aceitar pedido", "Iniciar preparo", "Marcar como pronto", "Saiu para entrega", "Concluir").</li><li><b>Cozinha</b> — clara e com letra maior para leitura à distância: agendados no topo, "Em preparo" em cartões com tempo corrido (âmbar a partir de 15 min) e marcação por item, "Prontos" ao lado.</li><li><b>Celular</b> — fila em cartões; cozinha em coluna única.</li></ol>
+<p class="hint-motion">Com movimento: clique nos pedidos da fila (troca com blur e total que conta), em "Marcar" na cozinha e nos botões de ação (botão → carregando → check). Pedidos do iFood com a logo na moldura redonda, como hoje.</p></header>
 <section class="row"><h2 class="cap-h">1 · Fila de pedidos — desktop 1440</h2>{PED_D}</section>
 <section class="row"><h2 class="cap-h">2 · Cozinha — desktop 1440</h2>{COZ_D}</section>
 <section class="row mob"><div><h2 class="cap-h">3 · Fila — celular 390</h2>{PED_M}</div><div><h2 class="cap-h">4 · Cozinha — celular 390</h2>{COZ_M}</div></section>
-</body></html>'''
+<script>
+document.querySelectorAll('.ped .qc').forEach((c) => c.addEventListener('click', () => {{
+  document.querySelectorAll('.ped .qc').forEach((x) => x.classList.remove('on')); c.classList.add('on');
+  const det = document.querySelector('.det'); const tot = document.getElementById('d-tot'); const from = parseFloat(tot.textContent.replace('.','').replace(',','.'));
+  zSwap(det, () => {{ document.getElementById('d-n').textContent = '#' + c.dataset.n; document.getElementById('d-cli').textContent = c.dataset.cli; document.getElementById('d-src').textContent = 'Pedido · ' + c.dataset.src; }});
+  zCount(tot, from, parseFloat(c.dataset.tot));
+}}));
+document.querySelectorAll('.kmark').forEach((b) => b.addEventListener('click', () => {{
+  const li = b.closest('li'); li.classList.toggle('done'); const done = li.classList.contains('done');
+  b.innerHTML = done ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>Pronto' : 'Marcar';
+  b.classList.remove('popin'); void b.offsetWidth; b.classList.add('popin');
+}}));
+</script>{MOTION_JS}</body></html>'''
 open('/home/user/zelopdv/docs/design-system/mockups/02-pedidos-cozinha.html','w').write(html)
