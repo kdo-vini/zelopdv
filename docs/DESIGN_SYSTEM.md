@@ -12,7 +12,7 @@
 | 0 | Base: tokens, superfícies, flag, travas, documentação, componentes primitivos | **Entregue** — sem mudança visual (0 pixels em 16 rotas × 2 larguras) |
 | 1 | Componentes do sistema + globais do layout raiz + ícones 1,75 | **Em andamento** — globais do layout (toasts, confirmação, offline, atualização, chats, bottom nav) atrás da flag |
 | 2 | Superfície Brand no ar (site, landing, blog) | **Pronta atrás da flag** — Geist + títulos em Mono, tokens `mk-*` nas 8 páginas/componentes com paleta Tailwind, erro legível; legado idêntico (full page). Falta ligar `LIVE_SURFACES.brand` (decisão do dono) |
-| 3 | Autenticação (Brand + cartão App) | Pendente |
+| 3 | Autenticação (Brand + cartão App) | **Pronta atrás da flag** — `AuthLayout` navy com cartão `data-surface="app"`, marca Zelo + título Mono; `.auth-*` restilizados só dentro do cartão; legado idêntico |
 | 4 | Superfície App atrás da flag (estrutura → `/app` → modais → operação → gestão → relatórios → conta) | **Em andamento** — sidebar navy (métricas do mockup) e `/app` (desktop + mobile) no layout do mockup, com o sistema de movimento; modais do PDV (pagamento, sucesso, quantidade, avulso, caixa, montável, novo produto), toasts, confirmação, offline e bottom nav no sistema |
 | 5 | E-mails, PWA/`theme-color`, favicon/OG/logos, `chartColors.js` | Pendente |
 | 6 | Virada: App padrão, remover legado/flag/`class="dark"`, `check:ui` no repo todo | Pendente |
@@ -170,7 +170,13 @@ depois). O fluxo da venda não ganhou espera: botões e Enter do sucesso respond
 - Verificação: `visual:diff` só compara a primeira dobra; a Fase 2 foi conferida também com captura de **página inteira** contra `main` (ruído medido rodando `main` duas vezes).
 - **Ligar:** `LIVE_SURFACES.brand = true` em `src/lib/theme/surface.js` + `tests/themeSurface.test.js`. Isso muda produção para todo visitante — fica para o dono decidir depois de ver com `?tema=novo`.
 
-## Tipografia
+## Autenticação (Fase 3)
+
+- `AuthLayout` tem ramo `{#if $zeloSurface}`: página navy (superfície brand), sino + "Zelo" em Mono acima, cartão claro `data-surface="app"` (raio de sheet, sombra flutuante), título em `title` (Mono), subtítulo `body`. No celular o cartão vira folha que ocupa a tela abaixo da marca.
+- `.auth-input`, `.auth-btn`, `.auth-label`, `.auth-link`, `.auth-divider`… (globais em `app.css`) ganham regras só sob `.auth-card[data-surface="app"]`: campo 48 px, botão de ação navy com squash, foco com `--focus`. O legado não tem esse atributo e fica como está.
+- `GoogleAuthButton` e `EmailSentHelper` já usavam tokens e seguem o cartão sem mudança. `/indica/[codigo]` não usa `AuthLayout`; ficou no visual Brand da Fase 2 (fundo navy, título Mono).
+
+
 
 Decisão do produto: **Geist Mono é a voz da marca**; Geist carrega o texto denso. Papéis, usos e medidas: `DESIGN.md` → Tipografia (e `PLAN.md` §7). A escala viva está em `/dev/design-system`.
 

@@ -48,7 +48,10 @@ visual em `DESIGN.md` (reescrito), implementação e migração em
     Mono, tokens `mk-*` (legado = cor Tailwind original, Brand = marca) nas 8
     páginas/componentes com paleta crua, botão do 404 legível. Legado idêntico
     em página inteira. **Ligar `LIVE_SURFACES.brand` é decisão do dono.**
-  - Próximo: Fase 3 — autenticação.
+  - **Fase 3 — autenticação** (atrás da flag): `AuthLayout` navy + cartão
+    claro `data-surface="app"`; `.auth-*` restilizados só no cartão. Legado
+    idêntico em página inteira (login, cadastro, esqueci, redefinir, indica).
+  - Próximo: Fase 4 — resto do sistema (mesas, pedidos, cozinha, gestão…).
 
 ## Sessão 2026-09-25 — GEO, leva 2 (branch `feat/geo-wave-2`)
 

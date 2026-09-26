@@ -1,4 +1,6 @@
 <script>
+  import { zeloSurface } from '$lib/theme/surface';
+  import ZeloMark from '$lib/components/zelo/ZeloMark.svelte';
   /** @type {string} */
   export let title = '';
   /** @type {string} */
@@ -9,6 +11,33 @@
   <title>{title ? `${title} — Zelo PDV` : 'Zelo PDV'}</title>
 </svelte:head>
 
+{#if $zeloSurface}
+  <!-- Zelo Design System (Fase 3): navy page (brand surface), light form card (data-surface="app").
+       Same slots and props as the legacy branch below. docs/DESIGN_SYSTEM.md → Autenticação. -->
+  <div class="auth-page zelo">
+    <a href="/" class="zauth-brand" aria-label="Zelo PDV — página inicial">
+      <span class="zauth-mark"><ZeloMark size={26} /></span>
+      <span class="zauth-word">Zelo<small>PDV</small></span>
+    </a>
+
+    <div class="auth-card zauth-card" data-surface="app">
+      {#if title}
+        <h1 class="zauth-title">{title}</h1>
+      {/if}
+      {#if subtitle}
+        <p class="zauth-subtitle">{subtitle}</p>
+      {/if}
+
+      <slot />
+
+      {#if $$slots.footer}
+        <div class="auth-footer zauth-footer">
+          <slot name="footer" />
+        </div>
+      {/if}
+    </div>
+  </div>
+{:else}
 <div class="auth-page">
   <!-- Subtle radial glow (CSS-only, zero images) -->
   <div class="auth-glow" aria-hidden="true"></div>
@@ -35,6 +64,7 @@
     {/if}
   </div>
 </div>
+{/if}
 
 <style>
   /* ── Full-page background ── */
@@ -144,6 +174,48 @@
     .auth-glow {
       width: 300px;
       height: 300px;
+    }
+  }
+
+  /* ═══ Zelo Design System (only rendered when $zeloSurface); colour and type only through tokens ═══ */
+  .auth-page.zelo {
+    flex-direction: column;
+    gap: 28px;
+    padding: 40px 16px;
+    background: var(--bg-app);
+    color: var(--text-main);
+    font-family: var(--zelo-font-ui);
+  }
+  .zauth-brand { display: inline-flex; align-items: center; gap: 12px; color: var(--text-main); text-decoration: none; }
+  .zauth-brand:focus-visible { outline: none; border-radius: var(--zelo-radius-control); box-shadow: 0 0 0 4px var(--focus); }
+  .zauth-mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--primary); color: var(--primary-text); }
+  .zauth-word { font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+  .zauth-word small { margin-left: 6px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); color: var(--text-muted); }
+  .zauth-card {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    padding: 32px 28px 28px;
+    border: 1px solid var(--border-card);
+    border-radius: var(--zelo-radius-sheet);
+    background: var(--bg-panel);
+    color: var(--text-main);
+    box-shadow: var(--elevation-float);
+  }
+  .zauth-title { margin: 0; text-align: center; font: var(--type-title); letter-spacing: var(--type-title-tracking); color: var(--text-main); }
+  .zauth-subtitle { margin: 8px 0 24px; text-align: center; font: var(--type-body); letter-spacing: var(--type-body-tracking); color: var(--text-muted); }
+  .zauth-title + :global(*:not(.zauth-subtitle)) { margin-top: 24px; }
+  .zauth-footer { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle); text-align: center; font: var(--type-label); letter-spacing: var(--type-label-tracking); }
+
+  @media (max-width: 480px) {
+    .auth-page.zelo { align-items: center; justify-content: flex-start; gap: 20px; padding: 28px 0 0; }
+    .zauth-card { align-self: stretch; }
+    .zauth-card {
+      flex: 1;
+      max-width: 100%;
+      padding: 28px 20px calc(24px + env(safe-area-inset-bottom));
+      border-width: 1px 0 0;
+      border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0;
     }
   }
 </style>

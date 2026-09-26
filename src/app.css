@@ -422,6 +422,43 @@
 }
 
 
+/* Zelo Design System (Fase 3): the auth card is a light `data-surface="app"` subtree inside the
+   brand surface (AuthLayout). Scoped to that card, so legacy auth pages keep the rules above. */
+.auth-card[data-surface="app"] .auth-input {
+  height: 48px;
+  padding: 0 14px;
+  border-radius: var(--zelo-radius-control);
+  font: var(--type-body);
+  letter-spacing: var(--type-body-tracking);
+  color: var(--text-main);
+  background-color: var(--bg-input);
+  border-color: var(--border-subtle);
+}
+.auth-card[data-surface="app"] .auth-input:hover { border-color: var(--border-strong); }
+.auth-card[data-surface="app"] .auth-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--focus); }
+.auth-card[data-surface="app"] .auth-label { margin-bottom: 6px; font: var(--type-label); letter-spacing: var(--type-label-tracking); color: var(--text-label); }
+.auth-card[data-surface="app"] .auth-btn {
+  height: 52px;
+  padding: 0 16px;
+  border-radius: var(--zelo-radius-control);
+  font: var(--type-label);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--primary-text);
+  background: var(--primary);
+  box-shadow: var(--elevation-float);
+  transition: background-color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+}
+.auth-card[data-surface="app"] .auth-btn:hover:not(:disabled) { opacity: 1; background: var(--primary-hover); }
+.auth-card[data-surface="app"] .auth-btn:active:not(:disabled) { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+.auth-card[data-surface="app"] .auth-btn .spinner { border-color: color-mix(in srgb, var(--primary-text) 30%, transparent); border-top-color: var(--primary-text); }
+.auth-card[data-surface="app"] .auth-link { color: var(--text-main); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.auth-card[data-surface="app"] .auth-link:hover { color: var(--text-main); text-decoration-color: currentColor; }
+.auth-card[data-surface="app"] :is(.auth-error, .auth-success) { border-radius: var(--zelo-radius-control); font: var(--type-caption); font-size: 13px; }
+.auth-card[data-surface="app"] .auth-divider { color: var(--text-muted); font: var(--type-caption); }
+.auth-card[data-surface="app"] .auth-divider::before,
+.auth-card[data-surface="app"] .auth-divider::after { background: var(--border-subtle); }
+
 /* Snowfall Animation */
 .snow-container {
   pointer-events: none;
