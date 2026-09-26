@@ -1,6 +1,6 @@
 <script>
   import { tick, onMount } from 'svelte';
-  import { Check, MessageCircle } from 'lucide-svelte';
+  import { Check, MessageCircle, ChevronLeft, ArrowRight } from 'lucide-svelte';
   import { supabase } from '$lib/supabaseClient';
   import { maskPhone } from '$lib/masks';
   import {
@@ -17,6 +17,14 @@
   import { getStoredAcquisitionOrigin } from '$lib/attribution/client';
   import { HEARD_FROM_OPTIONS, buildHeardFromPayload } from '$lib/attribution/heardFrom';
   import { capturePostHogEvent } from '$lib/posthogClient';
+
+  // ── Zelo Design System (presentation only; see docs/DESIGN_SYSTEM.md) ──
+  import { zeloSurface } from '$lib/theme/surface';
+  import ZeloMark from '$lib/components/zelo/ZeloMark.svelte';
+  import MorphButton from '$lib/components/zelo/MorphButton.svelte';
+  import Kbd from '$lib/components/zelo/Kbd.svelte';
+  import { Button } from '$lib/components/ui/button';
+  import { blurSwap, rise, drawStroke } from '$lib/motion/transitions.js';
 
   export let show = false;
   export let userId = '';
@@ -55,6 +63,30 @@
   let welcomeTitleEl;
 
   $: dotsState = computeOnboardingDotsState({ step, totalSteps, arrived });
+
+  // Presentation only (Zelo Design System): MorphButton state mapping, no logic change.
+  $: morphState = saving ? 'loading' : 'idle';
+
+  // Presentation only: keeps the mobile bottom sheet floating above the on-screen
+  // keyboard (mockup frames 4–6). No-op wherever visualViewport is unavailable.
+  function keyboardAvoid(node) {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv) return {};
+    const update = () => {
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      node.style.setProperty('--wiz-kb', `${kb}px`);
+      node.classList.toggle('kb-float', kb > 0);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return {
+      destroy() {
+        vv.removeEventListener('resize', update);
+        vv.removeEventListener('scroll', update);
+      },
+    };
+  }
 
   $: if (show || step) {
     tick().then(() => {
@@ -296,6 +328,137 @@
 </script>
 
 {#if show}
+{#if $zeloSurface}
+<!--
+  Zelo Design System (Fase 4): same handlers/bindings/state as the legacy branch below.
+  Mobile → bottom sheet with keyboard avoidance; desktop → centered card.
+  docs/design-system/mockups/06-onboarding.html → frames 4–8, 17, 20.
+-->
+<div
+  role="dialog"
+  aria-modal="true"
+  aria-label={arrived ? 'Conta pronta' : 'Configuração inicial'}
+  class="wiz-backdrop"
+>
+  <div class="wiz-sheet" use:keyboardAvoid in:rise={{ y: 32 }}>
+
+    <!-- Top: mark + progress -->
+    <div class="wiz-header">
+      <span class="wiz-brand type-num-sm"><ZeloMark size={16} />Zelo PDV</span>
+      <div class="wiz-prog" role="presentation">
+        {#each dotsState as dotStatus}
+          <span class="wiz-seg" class:is-done={dotStatus === 'completed'} class:is-current={dotStatus === 'current'}></span>
+        {/each}
+      </div>
+    </div>
+
+    <!-- Step content -->
+    <div class="wiz-body">
+      {#key arrived ? 'arrived' : step}
+        <div class="wiz-step" in:blurSwap out:blurSwap>
+          {#if arrived}
+            <div class="wiz-badge" aria-hidden="true">
+              <svg viewBox="-16 -16 32 32"><path d="M-9 0.5 L-3 6.5 L9.5 -6" in:drawStroke={{ delay: 60 }} /></svg>
+            </div>
+            <h2 class="wiz-title type-title" tabindex="-1" bind:this={welcomeTitleEl}>Boas-vindas ao Zelo, {nome}.</h2>
+            <p class="wiz-hint type-body">Seu teste de {TRIAL_DAYS} dias começou. Se quiser, cadastramos seus produtos junto com você pelo WhatsApp — uns 15 minutos.</p>
+
+            {#if showHeardFromPrompt || showHeardFromThanks}
+              {#key showHeardFromPrompt}
+                <div in:blurSwap out:blurSwap>
+                  {#if showHeardFromPrompt}
+                    <div class="wiz-hf">
+                      <div class="wiz-hf-head">
+                        <p class="wiz-hf-q type-label">Como você conheceu o Zelo?</p>
+                        <button type="button" class="wiz-skip type-label" on:click={skipHeardFrom}>Pular</button>
+                      </div>
+                      <div class="wiz-chips">
+                        {#each HEARD_FROM_OPTIONS as option}
+                          <button type="button" class="wiz-chip type-label" on:click={() => selectHeardFrom(option.id)}>
+                            {option.label}
+                          </button>
+                        {/each}
+                      </div>
+                    </div>
+                  {:else}
+                    <p class="wiz-thanks type-label">
+                      <Check size={16} strokeWidth={1.75} aria-hidden="true" />
+                      Valeu por contar!
+                    </p>
+                  {/if}
+                </div>
+              {/key}
+            {/if}
+          {:else if step === 1}
+            <p class="wiz-eyebrow type-eyebrow">Passo 1 de 2</p>
+            <h2 class="wiz-title type-title">Como se chama sua loja?</h2>
+            <p class="wiz-hint type-body">É o nome que vai no recibo do seu cliente.</p>
+            <input
+              bind:this={nomeInput}
+              bind:value={nome}
+              on:keydown={handleKeydown}
+              type="text"
+              placeholder="Ex: Lanchonete do João"
+              class="wiz-input"
+              class:has-error={error}
+            />
+          {:else if step === 2}
+            <p class="wiz-eyebrow type-eyebrow">Passo 2 de 2</p>
+            <h2 class="wiz-title type-title">Qual o seu WhatsApp?</h2>
+            <p class="wiz-hint type-body">É por onde a gente te ajuda. Se quiser, cadastramos seus produtos junto com você — uns 15 minutos, sem custo.</p>
+            <input
+              bind:this={contatoInput}
+              bind:value={contato}
+              on:keydown={handleKeydown}
+              on:input={(e) => { contato = maskPhone(e.target.value); e.target.value = contato; }}
+              type="tel"
+              inputmode="numeric"
+              placeholder="(11) 98765-4321"
+              class="wiz-input is-num"
+              class:has-error={error}
+            />
+          {/if}
+
+          {#if error}
+            <p class="wiz-error type-caption" role="alert">{error}</p>
+          {/if}
+        </div>
+      {/key}
+    </div>
+
+    <!-- Footer: back + advance, ou CTAs do estado de chegada -->
+    {#if arrived}
+      <div class="wiz-footer wiz-footer-stack">
+        <MorphButton state="idle" size="cta" onclick={irParaPrimeiraVenda}>
+          Fazer primeira venda
+          <ArrowRight size={18} strokeWidth={1.75} aria-hidden="true" />
+        </MorphButton>
+        <Button variant="outlined" size="touch" class="wiz-help" onclick={pedirAjudaWhatsApp}>
+          <MessageCircle size={18} strokeWidth={1.75} aria-hidden="true" />
+          Ajuda no WhatsApp
+        </Button>
+      </div>
+    {:else if step === 1}
+      <div class="wiz-footer">
+        <MorphButton state={morphState} size="cta" loadingLabel="Salvando…" onclick={avancar}>
+          Continuar<Kbd class="wiz-kbd">Enter</Kbd>
+        </MorphButton>
+      </div>
+    {:else}
+      <div class="wiz-footer wiz-footer-row">
+        <button type="button" class="wiz-back" disabled={saving} on:click={voltar}>
+          <ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />
+          Voltar
+        </button>
+        <MorphButton state={morphState} size="cta" class="wiz-cta" loadingLabel="Salvando…" onclick={finalizar}>
+          Começar a usar
+        </MorphButton>
+      </div>
+    {/if}
+
+  </div>
+</div>
+{:else}
 <div
   role="dialog"
   aria-modal="true"
@@ -416,6 +579,7 @@
 
   </div>
 </div>
+{/if}
 {/if}
 
 <style>
@@ -753,6 +917,343 @@
     .dot.completed,
     .dot.current {
       transform: none;
+    }
+  }
+
+  /* ═══ Zelo Design System (only rendered when $zeloSurface); tokens only ═══ */
+  .wiz-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: color-mix(in srgb, var(--shadow-color) 60%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .wiz-sheet {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 440px;
+    padding: 22px 28px 26px;
+    background: var(--bg-panel);
+    color: var(--text-main);
+    font-family: var(--zelo-font-ui);
+    border: 1px solid var(--border-card);
+    border-radius: var(--zelo-radius-sheet);
+    box-shadow: var(--elevation-float);
+  }
+
+  .wiz-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .wiz-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  .wiz-prog {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .wiz-seg {
+    position: relative;
+    width: 28px;
+    height: 6px;
+    border-radius: var(--zelo-radius-pill);
+    background: var(--bg-sunken);
+    overflow: hidden;
+  }
+
+  .wiz-seg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--primary);
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+
+  .wiz-seg.is-done::after {
+    transform: scaleX(1);
+  }
+
+  .wiz-seg.is-current {
+    box-shadow: inset 0 0 0 1.5px var(--primary);
+  }
+
+  .wiz-seg.is-current::after {
+    transform: scaleX(0.35);
+  }
+
+  .wiz-body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wiz-step {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .wiz-eyebrow {
+    color: var(--text-muted);
+  }
+
+  .wiz-title {
+    margin: 2px 0 0;
+    color: var(--text-main);
+    outline: none;
+  }
+
+  .wiz-hint {
+    margin: 0 0 2px;
+    color: var(--text-label);
+  }
+
+  .wiz-input {
+    width: 100%;
+    height: 56px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--zelo-radius-control);
+    background: var(--bg-input);
+    color: var(--text-main);
+    font: var(--type-body);
+    letter-spacing: var(--type-body-tracking);
+    outline: none;
+    transition: border-color var(--zelo-dur-fast) var(--zelo-ease-spring), box-shadow var(--zelo-dur-fast) var(--zelo-ease-spring);
+  }
+
+  .wiz-input.is-num {
+    font: var(--type-num-md);
+    letter-spacing: var(--type-num-md-tracking);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wiz-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .wiz-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--focus);
+  }
+
+  .wiz-input.has-error {
+    border-color: var(--status-error-text);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--status-error-text) 24%, transparent);
+  }
+
+  .wiz-error {
+    margin: 2px 0 0;
+    color: var(--status-error-text);
+  }
+
+  /* Estado de chegada */
+  .wiz-badge {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 2px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--primary-text);
+  }
+
+  .wiz-badge svg {
+    width: 28px;
+    height: 28px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .wiz-hf {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 12px 14px;
+    border-radius: var(--zelo-radius-card);
+    background: var(--bg-sunken);
+  }
+
+  .wiz-hf-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .wiz-hf-q {
+    margin: 0;
+    color: var(--text-main);
+  }
+
+  .wiz-skip {
+    padding: 4px 4px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    transition: color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+
+  .wiz-skip:hover {
+    color: var(--text-main);
+  }
+
+  .wiz-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .wiz-chip {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: var(--zelo-radius-pill);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-panel);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: border-color var(--zelo-dur-fast) var(--zelo-ease-spring), background var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+
+  .wiz-chip:hover {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+
+  .wiz-thanks {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: var(--status-success-text);
+  }
+
+  /* Footer */
+  .wiz-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .wiz-footer.wiz-footer-row {
+    justify-content: space-between;
+  }
+
+  .wiz-footer.wiz-footer-row :global(.wiz-cta) {
+    flex: 1;
+  }
+
+  .wiz-footer.wiz-footer-stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .wiz-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 56px;
+    padding: 0 12px;
+    border-radius: var(--zelo-radius-control);
+    background: transparent;
+    border: none;
+    color: var(--text-label);
+    font: var(--type-label);
+    letter-spacing: var(--type-label-tracking);
+    cursor: pointer;
+    transition: color var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+
+  .wiz-back:hover:not(:disabled) {
+    color: var(--text-main);
+  }
+
+  .wiz-back:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  /* press squash on custom controls (system Button and MorphButton already squash) */
+  .wiz-back:active:not(:disabled),
+  .wiz-chip:active,
+  .wiz-skip:active {
+    transform: scale(var(--zelo-press-scale));
+    transition-duration: var(--zelo-dur-fast);
+  }
+
+  /* Kbd hint: desktop only */
+  .wiz-sheet :global(.wiz-kbd) {
+    display: inline-flex;
+  }
+
+  /* ── Mobile: bottom sheet with keyboard avoidance ─────────────────────── */
+  @media (max-width: 640px) {
+    .wiz-backdrop {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .wiz-sheet {
+      position: relative;
+      max-width: none;
+      padding: 18px 20px calc(22px + env(safe-area-inset-bottom));
+      border-width: 1px 0 0;
+      border-radius: var(--zelo-radius-sheet) var(--zelo-radius-sheet) 0 0;
+      /* Same reserved strip as Sheet.svelte (stays above MobileBottomNav, z-index 1100) — or,
+         when the keyboard is open, however much keyboardAvoid says it actually covers. */
+      bottom: max(var(--mobile-bottom-nav-offset, 0px), var(--wiz-kb, 0px));
+      transition: bottom var(--zelo-dur-base) var(--zelo-ease-out);
+    }
+
+    /* keyboard open: floats above it, full radius, small side margins.
+       :global because the class is toggled imperatively by the keyboardAvoid action. */
+    .wiz-sheet:global(.kb-float) {
+      margin: 0 8px;
+      border-width: 1px;
+      border-radius: var(--zelo-radius-sheet);
+    }
+
+    .wiz-sheet :global(.wiz-kbd) {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wiz-seg::after,
+    .wiz-sheet,
+    .wiz-back,
+    .wiz-chip,
+    .wiz-skip {
+      transition: none;
     }
   }
 </style>

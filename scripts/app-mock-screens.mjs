@@ -8,9 +8,20 @@
  *   BASE=http://localhost:5175 OUT=/tmp/app ADD="X-Bacon,X-Burger" KEYS=F9 VP=390x844 OPEN_CART=1 node scripts/app-mock-screens.mjs
  * Env: ROUTE (default /app), QS (default ?tema=novo; "" for legacy), ADD (tabs/radios/buttons to click by accessible name,
  * in order), KEYS (keys to press after), OPEN_CART, VP (WxH), OUT (png path without extension), CHROMIUM_PATH,
+<<<<<<< Updated upstream
  * STEPS (after the rest: comma list of `key:<Key>`, `click:<accessible name>`, `wait:<ms>`), MOTION=1 (real motion),
  * NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
  * BILLING=1 mocks the local Pix create/status endpoints for subscription screenshots.
+=======
+ * STEPS (after the rest: comma list of `key:<Key>`, `click:<accessible name>`, `type:<text>` (keyboard.type on
+ * whatever is focused), `wait:<ms>`), MOTION=1 (real motion), NO_CAIXA=1 (no open caixa), EMPTY=1 (empty catalog).
+ * WIZARD=1: empresa_perfil comes back with empty nome_exibicao/contato (so /perfil?msg=complete opens the
+ * OnboardingWizard), POST /api/billing/start-trial is intercepted with 200 {}, and getUser() carries no
+ * heard_from metadata. No effect when the flag is absent. If ROUTE already has a `?` (e.g. /perfil?msg=complete),
+ * QS is appended with `&` instead of its own `?`.
+ * SLOW=<ms>: delays writes to a table (default empresa_perfil, override with SLOW_TABLE) so a loading state is
+ * screenshottable. No effect when absent.
+>>>>>>> Stashed changes
  * LOAD_STATE (default networkidle; use domcontentloaded for pages with persistent connections).
  * WAIT_AFTER (milliseconds after navigation; default 2500).
  * docs/DESIGN_SYSTEM.md → Verificação.
@@ -41,7 +52,9 @@ const prods = [
 ];
 const tables = {
   subscriptions: [{ id: 's1', user_id: UID, status: 'active', plan_tier: 'pdv', current_period_end: future, has_zelo_menu: !!process.env.ORDERS, has_mesas: !!process.env.MESAS, has_mesas_addon: !!process.env.MESAS, has_acessos: false }],
-  empresa_perfil: [{ id: 'e1', user_id: UID, nome_exibicao: 'Padaria Bom Dia', contato: '11999990000', documento: '11222333000181', tabelas_preco_ativo: true, tabela_preco_1_nome: 'Balcão', tabela_preco_2_nome: 'iFood', tabela_preco_3_nome: 'Atacado', onboarding_completed: true, plataformas_pagamento: [] }],
+  empresa_perfil: [process.env.WIZARD
+    ? { id: 'e1', user_id: UID, nome_exibicao: '', contato: '', documento: '', tabelas_preco_ativo: false, onboarding_completed: false, plataformas_pagamento: [] }
+    : { id: 'e1', user_id: UID, nome_exibicao: 'Padaria Bom Dia', contato: '11999990000', documento: '11222333000181', tabelas_preco_ativo: true, tabela_preco_1_nome: 'Balcão', tabela_preco_2_nome: 'iFood', tabela_preco_3_nome: 'Atacado', onboarding_completed: true, plataformas_pagamento: [] }],
   zelomenu_modifier_groups: [
     { id: 901, id_produto: 17, nome: 'Tamanho', tipo: 'variacao', modo_preco: 'substituir', min_selecoes: 1, max_selecoes: 1, permite_quantidade: false, ativo: true, ordem: 1 },
     { id: 902, id_produto: 17, nome: 'Complementos', tipo: 'adicional', modo_preco: 'somar', min_selecoes: 0, max_selecoes: 3, permite_quantidade: false, ativo: true, ordem: 2 },
@@ -104,6 +117,10 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   if (url.pathname.startsWith('/rest/v1/rpc/')) return json(null);
   const m = url.pathname.match(/^\/rest\/v1\/([a-z_]+)/);
   if (m) {
+    // SLOW=<ms>: delay writes to a table so a loading state (e.g. the wizard's MorphButton) is screenshottable.
+    if (process.env.SLOW && m[1] === (process.env.SLOW_TABLE || 'empresa_perfil') && !['GET', 'HEAD'].includes(req.method())) {
+      await new Promise((r) => setTimeout(r, Number(process.env.SLOW)));
+    }
     // PostgREST `col=eq.value` filters (enough for single-row lookups like /app/mesas/[id])
     let rows = tables[m[1]] ?? [];
     for (const [k, v] of url.searchParams) {
@@ -117,6 +134,7 @@ await ctx.route('https://mockproj.supabase.co/**', async (route) => {
   }
   return json({});
 });
+<<<<<<< Updated upstream
 if (process.env.BILLING) {
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
   await ctx.route('**/api/billing/pix/create', (route) => route.fulfill({
@@ -135,10 +153,17 @@ if (process.env.BILLING) {
     contentType: 'application/json',
     body: JSON.stringify({ paymentId: 'pix_mock_1', status: 'pending', expiresAt }),
   }));
+=======
+if (process.env.WIZARD) {
+  await ctx.route('**/api/billing/start-trial', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+>>>>>>> Stashed changes
 }
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
-await page.goto(`${BASE}${process.env.ROUTE || '/app'}${QS}`, { waitUntil: LOAD_STATE });
+const ROUTE = process.env.ROUTE || '/app';
+// ROUTE may already carry its own `?` (e.g. /perfil?msg=complete): join QS with `&` then, `?` otherwise.
+const joinedQS = QS ? (ROUTE.includes('?') ? QS.replace(/^\?/, '&') : QS) : '';
+await page.goto(`${BASE}${ROUTE}${joinedQS}`, { waitUntil: LOAD_STATE });
 await page.waitForTimeout(WAIT_AFTER);
 console.log('url', page.url());
 for (const name of ADD) {
@@ -157,6 +182,7 @@ for (const step of (process.env.STEPS || '').split(',').filter(Boolean)) {
   const [kind, ...rest] = step.split(':'); const arg = rest.join(':');
   if (kind === 'key') await page.keyboard.press(arg);
   else if (kind === 'wait') await page.waitForTimeout(Number(arg));
+  else if (kind === 'type') await page.keyboard.type(arg);
   else if (kind === 'click') {
     let target = null;
     for (const role of ['tab', 'radio', 'button', 'menuitem']) {
