@@ -6,7 +6,7 @@
    * active button paints the pill itself, so SSR and no-JS look the same.
    */
   import { LiquidIndicator } from '$lib/motion/liquid.svelte.js';
-  let { options = [], value = $bindable(), label = '', size = 'md', class: className = '' } = $props();
+  let { options = [], value = $bindable(), label = '', size = 'md', class: className = '', onselect = undefined } = $props();
 
   let root = $state();
   const indicator = new LiquidIndicator();
@@ -36,7 +36,7 @@
     <span class="ind" aria-hidden="true" style="transform: translateX({indicator.x}px); width: {indicator.width}px"></span>
   {/if}
   {#each options as option (option.value)}
-    <button type="button" role="radio" aria-checked={value === option.value} class:on={value === option.value} onclick={() => (value = option.value)}>
+    <button type="button" role="radio" aria-checked={value === option.value} class:on={value === option.value} onclick={() => { value = option.value; onselect?.(option.value); }}>
       {#if option.icon}<option.icon size={18} strokeWidth={1.75} aria-hidden="true" />{/if}{option.label}
     </button>
   {/each}

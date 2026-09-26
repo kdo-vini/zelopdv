@@ -35,6 +35,8 @@
     --zelo-success: #146C43; --zelo-success-bg: #E9F5EE; --zelo-success-line: #BFE3CD;
     --zelo-warning: #7A5200; --zelo-warning-bg: #FFF5DE; --zelo-warning-line: #F1D89B; --zelo-warning-dot: #D99A06;
     --zelo-error:   #B42318; --zelo-error-bg:   #FDECEA; --zelo-error-line:   #F5C2BC; --zelo-error-solid: #C8321F;
+    /* Report series (mockup 04): navy tints for cards, brand red for iFood. Mirrored in chartColors.js. */
+    --zelo-chart-debit: #4D6E9C; --zelo-chart-credit: #9FB3CF; --zelo-chart-neutral: #8A94A3; --zelo-chart-meal: #3E8E68; --zelo-ifood: #EA1D2C;
 
     /* Type */
     --zelo-font-ui: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;

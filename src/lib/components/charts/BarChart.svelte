@@ -78,3 +78,18 @@
     <div class="border-t border-slate-200 dark:border-slate-600 mt-1"></div>
   {/if}
 </div>
+
+<style>
+  /* Zelo Design System (only under [data-surface="app"]) — tokens only; legacy keeps the Tailwind colours */
+  :global([data-surface="app"]) h3 { font: var(--type-heading); letter-spacing: var(--type-heading-tracking); color: var(--text-main); }
+  :global([data-surface="app"]) .group > div:first-child { font: var(--type-caption); font-family: var(--zelo-font-num); color: var(--text-main); }
+  :global([data-surface="app"]) .group > div:last-child { font: var(--type-caption); font-family: var(--zelo-font-num); color: var(--text-muted); }
+  :global([data-surface="app"]) .rounded-t-sm {
+    max-width: 72px; margin-inline: auto; border-radius: 8px 8px 3px 3px;
+    transform-origin: bottom; animation: bar-rise 700ms var(--zelo-ease-spring) both;
+  }
+  :global([data-surface="app"]) .border-t { border-color: var(--border-subtle); }
+  :global([data-surface="app"]) .text-center { font: var(--type-body); color: var(--text-muted); }
+  @keyframes bar-rise { from { transform: scaleY(0); } }
+  @media (prefers-reduced-motion: reduce) { :global([data-surface="app"]) .rounded-t-sm { animation: none; } }
+</style>

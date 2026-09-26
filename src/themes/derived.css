@@ -33,3 +33,25 @@
     --shadow-modal: 0 24px 64px color-mix(in srgb, var(--shadow-color) 72%, transparent),
         0 8px 24px color-mix(in srgb, var(--shadow-color) 42%, transparent);
 }
+
+/* App surface report palette (mockup 04 aprovado). Same names; only the App surface changes. */
+[data-surface="app"] {
+    --chart-cash: var(--zelo-success);
+    --chart-pix: var(--zelo-navy);
+    --chart-debit: var(--zelo-chart-debit);
+    --chart-credit: var(--zelo-chart-credit);
+    --chart-card: var(--zelo-chart-neutral);
+    --chart-meal: var(--zelo-chart-meal);
+    --chart-fiado: var(--zelo-warning-dot);
+    --chart-bar: var(--zelo-navy);
+    --chart-platform-1: var(--zelo-navy);
+    --chart-platform-2: var(--zelo-ifood);
+    --chart-platform-3: var(--zelo-error);
+    --chart-platform-4: var(--zelo-warning-dot);
+    --chart-platform-5: var(--zelo-chart-debit);
+    --chart-platform-default: var(--zelo-chart-neutral);
+    --chart-channel-pdv: var(--zelo-chart-neutral);
+    --chart-channel-mesa: var(--zelo-chart-debit);
+    --chart-channel-manual: var(--zelo-warning-dot);
+    --chart-channel-ifood: var(--zelo-ifood);
+}

@@ -96,3 +96,18 @@
     </div>
   {/if}
 </div>
+
+<style>
+  /* Zelo Design System (only under [data-surface="app"]) — tokens only; legacy keeps the Tailwind colours */
+  :global([data-surface="app"]) h3 { font: var(--type-heading); letter-spacing: var(--type-heading-tracking); color: var(--text-main); }
+  :global([data-surface="app"]) .rounded-full.relative { animation: donut-in 700ms var(--zelo-ease-spring) both; }
+  :global([data-surface="app"]) .rounded-full.relative > div { background: var(--bg-panel); }
+  :global([data-surface="app"]) .rounded-full.relative span:first-child { font: var(--type-caption); color: var(--text-muted); }
+  :global([data-surface="app"]) .rounded-full.relative span:last-child { font: var(--type-num-md); font-variant-numeric: tabular-nums; color: var(--text-main); }
+  :global([data-surface="app"]) .flex-col.gap-2 span { font: var(--type-body); color: var(--text-label); }
+  :global([data-surface="app"]) .flex-col.gap-2 span.font-medium { font: var(--type-num-sm); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+  :global([data-surface="app"]) .flex-col.gap-2 span.font-medium:last-child { font-weight: 600; color: var(--text-main); }
+  :global([data-surface="app"]) .text-center { font: var(--type-body); color: var(--text-muted); }
+  @keyframes donut-in { from { transform: rotate(-90deg) scale(0.85); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { :global([data-surface="app"]) .rounded-full.relative { animation: none; } }
+</style>

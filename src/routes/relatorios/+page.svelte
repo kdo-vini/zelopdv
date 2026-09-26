@@ -36,6 +36,10 @@
 	import DonutChart from '$lib/components/charts/DonutChart.svelte';
 	import { PLATAFORMAS_PRESET } from '$lib/profileUtils';
 	import { CHART_COLORS } from '$lib/theme/chartColors';
+	import { get } from 'svelte/store';
+	import { zeloSurface } from '$lib/theme/surface';
+	import { MoneyText, Segmented, UnderlineTabs } from '$lib/components/zelo';
+	import { blurSwap } from '$lib/motion/transitions.js';
 	import { Banknote, ChartNoAxesColumnIncreasing, ChevronDown, FileText, Sheet, ShoppingBag, Undo2 } from 'lucide-svelte';
 
 
@@ -692,6 +696,9 @@
 	// ---------------- Relatório por Período (multi-caixas) ----------------
 
 	let preset = 'hoje'; // hoje | ontem | ultimos7 | ultimos30 | mesAtual | mesAnterior | personalizado
+	// mode swap: blur only on the Zelo surface; legacy keeps an instant swap
+	const modeIn = (node) => (get(zeloSurface) ? blurSwap(node) : { duration: 0 });
+
 	const presetOpcoes = [
 		{ key: 'hoje', label: 'Hoje' },
 		{ key: 'ontem', label: 'Ontem' },
@@ -1101,8 +1108,12 @@
 <!-- Barra de modo / filtros -->
 <section class="rounded-xl p-4 mb-4 space-y-4" style="background: var(--bg-card); border: 1px solid var(--border-card);">
 	<div class="flex flex-wrap items-center gap-3 text-sm">
+		{#if $zeloSurface}
+			<UnderlineTabs label="Modo do relatório" tabs={[{ value: 'caixa', label: 'Por caixa' }, { value: 'periodo', label: 'Por período' }]} bind:value={modoRelatorio} />
+		{:else}
 		<button class="px-3 py-1 rounded-sm border" class:btn-primary={modoRelatorio==='caixa'} on:click={() => modoRelatorio='caixa'}>Por Caixa</button>
 		<button class="px-3 py-1 rounded-sm border" class:btn-primary={modoRelatorio==='periodo'} on:click={() => modoRelatorio='periodo'}>Por Período</button>
+		{/if}
 	</div>
 	{#if modoRelatorio === 'caixa'}
 		<div class="space-y-3">
@@ -1155,9 +1166,13 @@
 	{:else}
 		<div class="space-y-3">
 			<div class="flex flex-wrap gap-2 text-xs">
+				{#if $zeloSurface}
+					<Segmented label="Período" size="sm" options={presetOpcoes.map((op) => ({ value: op.key, label: op.label }))} value={preset} onselect={(key) => { aplicarPreset(key); carregarRelatorioPeriodo(); }} />
+				{:else}
 				{#each presetOpcoes as op}
 					<button class="px-2 py-1 rounded-sm border" class:report-preset-active={preset===op.key} on:click={() => { aplicarPreset(op.key); carregarRelatorioPeriodo(); }}>{op.label}</button>
 				{/each}
+				{/if}
 			</div>
 			<div class="grid sm:grid-cols-3 gap-4 items-end">
 				<div class="min-w-0">
@@ -1224,7 +1239,7 @@
 				<p class="text-sm text-muted">Selecione um caixa ao lado para visualizar os relatórios.</p>
 			</div>
 		{:else}
-		<section class="flex flex-col gap-5">
+		<section class="flex flex-col gap-5" in:modeIn|global>
 			<!-- ✦ HERO: Receita Líquida -->
 			<div class="card-hero">
 				<div class="flex items-center gap-2 text-sm font-medium mb-1" style="color: var(--text-muted);">
@@ -1237,7 +1252,7 @@
 						</span>
 					{/if}
 				</div>
-				<div class="text-3xl font-bold tracking-tight tabular-nums" style="color: var(--text-main);">{fmt(totalTaxaEntregaCaixa > 0 ? receitaRestauranteCaixa : receitaLiquidaCaixa)}</div>
+				<div class="text-3xl font-bold tracking-tight tabular-nums" style="color: var(--text-main);">{#if $zeloSurface}<MoneyText value={totalTaxaEntregaCaixa > 0 ? receitaRestauranteCaixa : receitaLiquidaCaixa} size="lg" animate class="zr-hero" />{:else}{fmt(totalTaxaEntregaCaixa > 0 ? receitaRestauranteCaixa : receitaLiquidaCaixa)}{/if}</div>
 				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm" style="color: var(--text-muted);">
 					<span>Bruto: {fmt(totalGeral)}</span>
 					{#if totalDescontosCaixa > 0}
@@ -1748,7 +1763,7 @@
         </section>
 		{/if}
 	{:else}
-		<section class="space-y-5">
+		<section class="space-y-5" in:modeIn|global>
 			<!-- ✦ HERO: Receita Líquida -->
 			<div class="card-hero">
 				<div class="flex items-center gap-2 text-muted text-sm font-medium mb-1">
@@ -1761,7 +1776,7 @@
 						</span>
 					{/if}
 				</div>
-				<div class="text-3xl font-bold tracking-tight report-hero-value">{fmt(periodoTotalTaxaEntrega > 0 ? periodoReceitaRestaurante : periodoReceitaLiquida)}</div>
+				<div class="text-3xl font-bold tracking-tight report-hero-value">{#if $zeloSurface}<MoneyText value={periodoTotalTaxaEntrega > 0 ? periodoReceitaRestaurante : periodoReceitaLiquida} size="lg" animate class="zr-hero" />{:else}{fmt(periodoTotalTaxaEntrega > 0 ? periodoReceitaRestaurante : periodoReceitaLiquida)}{/if}</div>
 				<div class="flex flex-wrap items-center gap-2 mt-2 text-sm" style="color: var(--text-muted);">
 					<span>Bruto: {fmt(periodoTotalGeral)}</span>
 					{#if periodoTotalDescontos > 0}
@@ -2262,4 +2277,73 @@
   :global(.report-chart-bar) {
     background-color: var(--chart-bar);
   }
+
+  /* ═══ Zelo Design System (only under [data-surface="app"]; mockup 04 aprovado) — same markup, tokens only ═══ */
+  :global([data-surface="app"]) section.rounded-xl { border-radius: var(--zelo-radius-card) !important; background: var(--bg-panel) !important; }
+  :global([data-surface="app"]) section.rounded-xl label,
+  :global([data-surface="app"]) label.uppercase { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  :global([data-surface="app"]) .flex-wrap.text-xs:has(:global(.seg)) { overflow-x: auto; scrollbar-width: none; }
+  /* navy hero: redefine the tokens its inline styles read, so they resolve light on navy */
+  :global([data-surface="app"]) .card-hero {
+    --text-main: var(--primary-text);
+    --text-muted: color-mix(in srgb, var(--primary-text) 68%, transparent);
+    padding: 20px 22px; border: 0; border-radius: var(--zelo-radius-sheet); background: var(--primary); color: var(--primary-text);
+  }
+  :global([data-surface="app"]) .card-hero > div:first-child { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; }
+  :global([data-surface="app"]) .card-hero :global(.zr-hero small) { color: inherit; opacity: 0.68; }
+  :global([data-surface="app"]) .card-hero .text-3xl { margin-top: 6px; }
+  :global([data-surface="app"]) .card-hero .report-chip { background: color-mix(in srgb, var(--primary-text) 14%, transparent); color: var(--primary-text); font: var(--type-caption); font-family: var(--zelo-font-num); }
+  :global([data-surface="app"]) .card-mini { padding: 16px 18px; border-color: var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+  :global([data-surface="app"]) .card-inset { border: 0; border-radius: 12px; background: var(--bg-sunken); }
+  :global([data-surface="app"]) h3,
+  :global([data-surface="app"]) h2.font-semibold { font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
+  /* KPI label row → eyebrow; values → mono numbers */
+  :global([data-surface="app"]) .card-mini > div.text-xs:first-child { font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; }
+  :global([data-surface="app"]) .report-kpi-icon { display: none; }
+  :global([data-surface="app"]) .card-mini > .text-xl,
+  :global([data-surface="app"]) .card-inset .text-lg,
+  :global([data-surface="app"]) .card-inset .text-base,
+  :global([data-surface="app"]) .card-mini .text-base.font-bold { font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-variant-numeric: tabular-nums; }
+  :global([data-surface="app"]) .card-inset .text-base,
+  :global([data-surface="app"]) .card-mini .text-base.font-bold { font-size: 17px; }
+  :global([data-surface="app"]) .card-mini .text-sm.font-semibold,
+  :global([data-surface="app"]) .card-mini .text-sm.font-bold { font-family: var(--zelo-font-num); font-variant-numeric: tabular-nums; }
+  :global([data-surface="app"]) .card-mini h3.text-sm.font-semibold { font: var(--type-heading); }
+  /* payment bar grows on a spring */
+  :global([data-surface="app"]) .card-mini > .flex.h-3 { height: 14px; gap: 2px; border-radius: 7px; background: var(--bg-sunken); }
+  :global([data-surface="app"]) .card-mini > .flex.h-3 > div { transform-origin: left; animation: zr-grow 700ms var(--zelo-ease-spring) both; }
+  :global([data-surface="app"]) .card-mini > .flex.h-3 > div:nth-child(2) { animation-delay: 40ms; }
+  :global([data-surface="app"]) .card-mini > .flex.h-3 > div:nth-child(3) { animation-delay: 80ms; }
+  :global([data-surface="app"]) .card-mini > .flex.h-3 > div:nth-child(n+4) { animation-delay: 120ms; }
+  @keyframes zr-grow { from { transform: scaleX(0); } }
+  /* tables */
+  :global([data-surface="app"]) table { font: var(--type-body); }
+  :global([data-surface="app"]) thead th { height: 40px; font: var(--type-eyebrow); letter-spacing: var(--type-eyebrow-tracking); text-transform: uppercase; color: var(--text-muted); }
+  :global([data-surface="app"]) tbody td { height: 48px; }
+  :global([data-surface="app"]) td.tabular-nums,
+  :global([data-surface="app"]) td.text-right { font-family: var(--zelo-font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  :global([data-surface="app"]) .rounded-lg.border { border-radius: 12px; border-color: var(--border-card); }
+  :global([data-surface="app"]) .report-badge-count,
+  :global([data-surface="app"]) .report-page-active,
+  :global([data-surface="app"]) .report-preset-active { font-family: var(--zelo-font-num); }
+  /* export menu, buttons */
+  :global([data-surface="app"]) .animate-fade-in { padding: 6px; border-radius: var(--zelo-radius-control); border-color: var(--border-card) !important; background: var(--bg-panel) !important; box-shadow: var(--elevation-float); }
+  :global([data-surface="app"]) .animate-fade-in > button { border-radius: 8px; }
+  :global([data-surface="app"]) .animate-fade-in > button:hover { background: var(--bg-sunken); }
+  :global([data-surface="app"]) button.btn-primary,
+  :global([data-surface="app"]) button.btn-secondary {
+    height: 40px; border-radius: var(--zelo-radius-control); font: var(--type-label); font-weight: 600;
+    transition: background var(--zelo-dur-fast), transform var(--zelo-dur-slow) var(--zelo-ease-spring);
+  }
+  :global([data-surface="app"]) button.btn-primary:active:not(:disabled),
+  :global([data-surface="app"]) button.btn-secondary:active:not(:disabled) { transform: scale(var(--zelo-press-scale)); transition-duration: var(--zelo-dur-fast); }
+  :global([data-surface="app"]) :global(.seg button) { white-space: nowrap; }
+  /* legend values read the series colour inline; light tints (crédito) fail contrast as text */
+  :global([data-surface="app"]) .card-mini .grid .text-sm.font-semibold { color: var(--text-main) !important; }
+  :global([data-surface="app"]) .card-mini > div.font-bold { font: var(--type-num-lg); letter-spacing: var(--type-num-lg-tracking); font-variant-numeric: tabular-nums; }
+  /* chart boxes are cards, not insets */
+  :global([data-surface="app"]) .card-inset.border { padding: 16px 18px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+  :global([data-surface="app"]) section > div:has(> h2.font-semibold):not(.card-mini) { padding: 16px 18px; border: 1px solid var(--border-card); border-radius: var(--zelo-radius-card); background: var(--bg-panel); }
+  :global([data-surface="app"]) tbody td:first-child { padding-left: 12px; }
+  @media (prefers-reduced-motion: reduce) { :global([data-surface="app"]) .card-mini > .flex.h-3 > div { animation: none; } }
 </style>

@@ -5,7 +5,7 @@ export const PAYMENT_METHOD_VISUALS = Object.freeze({
   vale_refeicao: Object.freeze({
     swatch: 'var(--chart-meal)',
     textColor: 'var(--chart-meal)',
-    hex: CHART_COLORS.meal,
+    get hex() { return CHART_COLORS.meal; },
   }),
 });
 
