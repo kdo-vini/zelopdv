@@ -88,7 +88,6 @@
     { value: 2, label: 'Extensões' },
     { value: 3, label: 'Pagamento' },
   ];
-  const designPlanIds = ['pdv', 'bundle', 'chat'];
   const primaryPlanIds = ['pdv', 'bundle'];
   const addonCatalog = [
     {
@@ -983,20 +982,58 @@
     <a href="/app" class="btn-secondary zelo-system-link">Entrar no sistema <span aria-hidden="true">→</span></a>
   </header>
 
-  {#if camePromptingMesas || camePromptingAcessos || (cameUpgradingTo && cameUpgradingTo !== activePlanTier)}
+  {#if camePromptingMesas}
     <div class="status-card info zelo-context-status">
-      <div class="status-icon">
-        {#if camePromptingMesas}<Table2 class="size-6" aria-hidden="true" />
-        {:else if camePromptingAcessos}<KeyRound class="size-6" aria-hidden="true" />
-        {:else}<Zap class="size-6" aria-hidden="true" />{/if}
-      </div>
+      <div class="status-icon"><Table2 class="size-6" aria-hidden="true" /></div>
       <div>
-        <strong>
-          {#if camePromptingMesas}Ativar Módulo Mesas
-          {:else if camePromptingAcessos}Ativar Controle de Acessos
-          {:else}Upgrade para {PLANS[cameUpgradingTo].name}{/if}
-        </strong>
-        <div class="status-detail">Ajuste o pacote ou as extensões abaixo e confirme no pagamento.</div>
+          <strong>Você quer ativar o Módulo Mesas</strong>
+          <div class="status-detail">
+            {#if isActiveStrict && activePlanAllowsMesas && !activeMesasAddon}
+            Marque "Módulo Mesas" no wizard abaixo e confirme a renovação.
+          {:else if isActiveStrict && !activePlanAllowsMesas}
+            O Módulo Mesas precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
+          {:else if activeMesasAddon}
+            Já está ativo. Acesse <a href="/app/mesas">/app/mesas</a>.
+          {:else}
+            Marque "Módulo Mesas" no formulário de assinatura abaixo.
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if camePromptingAcessos}
+    <div class="status-card info zelo-context-status">
+      <div class="status-icon"><KeyRound class="size-6" aria-hidden="true" /></div>
+      <div>
+          <strong>Você quer ativar Controle de Acessos</strong>
+          <div class="status-detail">
+            {#if isActiveStrict && activePlanAllowsAcessos && !activeAcessosAddon}
+            Marque "Controle de Acessos" no wizard abaixo e confirme a renovação.
+          {:else if isActiveStrict && !activePlanAllowsAcessos}
+            Controle de Acessos precisa de um plano com PDV. Mude pra ZeloPDV ou Pacote Gestão + Atendimento.
+          {:else if activeAcessosAddon}
+            Já está ativo.
+          {:else}
+            Marque "Controle de Acessos" no formulário de assinatura abaixo.
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if cameUpgradingTo && cameUpgradingTo !== activePlanTier}
+    <div class="status-card info zelo-context-status">
+      <div class="status-icon"><Zap class="size-6" aria-hidden="true" /></div>
+      <div>
+        <strong>Upgrade para {PLANS[cameUpgradingTo].name}</strong>
+        <div class="status-detail">
+          {#if isActiveStrict}
+            Confirme abaixo. Novo valor entra na próxima cobrança.
+          {:else}
+            Selecione o plano e finalize sua assinatura.
+          {/if}
+        </div>
       </div>
     </div>
   {/if}
@@ -1057,7 +1094,7 @@
                 <p class="step-copy">{wizardStepOneCopy}</p>
               </div>
               <div class="plan-focus-grid zelo-plan-row">
-                {#each designPlanIds as planId}
+                {#each wizardPlanIds as planId}
                   <button
                     type="button"
                     class="plan-card plan-card-decision"
