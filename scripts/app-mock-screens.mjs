@@ -17,6 +17,9 @@
  * QS is appended with `&` instead of its own `?`.
  * SLOW=<ms>: delays writes to a table (default empresa_perfil, override with SLOW_TABLE) so a loading state is
  * screenshottable. No effect when absent.
+ * CHECKLIST=1: empresa_perfil comes back with documento/logo_url/largura_bobina all null, so
+ * OnboardingChecklist (/gestao) renders partially done instead of fully done (products still exist unless
+ * EMPTY=1 is also set). No effect on WIZARD's own empresa_perfil row. No effect when absent.
  * BILLING=1 mocks the local Pix create/status endpoints for subscription screenshots.
  * ACCESS=1 mocks roles and users for Controle de Acessos screenshots.
  * HOLD_NAV=1 suppresses analytics callbacks that navigate away from timed success screens.
@@ -55,7 +58,7 @@ const tables = {
   subscriptions: [{ id: 's1', user_id: UID, status: 'active', plan_tier: 'pdv', current_period_end: future, has_zelo_menu: !!process.env.ORDERS, has_mesas: !!process.env.MESAS, has_mesas_addon: !!process.env.MESAS, has_acessos: false }],
   empresa_perfil: [process.env.WIZARD
     ? { id: 'e1', user_id: UID, nome_exibicao: '', contato: '', documento: '', tabelas_preco_ativo: false, onboarding_completed: false, plataformas_pagamento: [] }
-    : { id: 'e1', user_id: UID, nome_exibicao: 'Padaria Bom Dia', contato: '11999990000', documento: '11222333000181', tabelas_preco_ativo: true, tabela_preco_1_nome: 'Balcão', tabela_preco_2_nome: 'iFood', tabela_preco_3_nome: 'Atacado', onboarding_completed: true, plataformas_pagamento: [] }],
+    : { id: 'e1', user_id: UID, nome_exibicao: 'Padaria Bom Dia', contato: '11999990000', documento: process.env.CHECKLIST ? null : '11222333000181', logo_url: process.env.CHECKLIST ? null : undefined, largura_bobina: process.env.CHECKLIST ? null : undefined, tabelas_preco_ativo: true, tabela_preco_1_nome: 'Balcão', tabela_preco_2_nome: 'iFood', tabela_preco_3_nome: 'Atacado', onboarding_completed: true, plataformas_pagamento: [] }],
   zelomenu_modifier_groups: [
     { id: 901, id_produto: 17, nome: 'Tamanho', tipo: 'variacao', modo_preco: 'substituir', min_selecoes: 1, max_selecoes: 1, permite_quantidade: false, ativo: true, ordem: 1 },
     { id: 902, id_produto: 17, nome: 'Complementos', tipo: 'adicional', modo_preco: 'somar', min_selecoes: 0, max_selecoes: 3, permite_quantidade: false, ativo: true, ordem: 2 },
